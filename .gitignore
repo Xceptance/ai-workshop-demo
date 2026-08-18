@@ -1,0 +1,47 @@
+# Maven Build Artifacts
+target/
+!.mvn/wrapper/maven-wrapper.jar
+!**/src/main/**/target/
+!**/src/test/**/target/
+
+# IDE Configuration & Metadata
+.idea/
+*.iws
+*.iml
+*.ipr
+.vscode/
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings
+.springBeans
+.sts4-cache
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.built-jar-path
+
+# OS-Specific Files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Keys, Credentials & Secrets
+api.key
+*.key
+*.secret
+.env
+.env.local
+.env.*.local
+
+# Runtime Logs, Session Traces & Dumps
+logs/*
+!logs/.gitkeep
+*.log
+*.dump

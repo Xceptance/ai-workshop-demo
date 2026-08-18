@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<div th:fragment="stepList" id="liveTimelineContainer">
+    <!-- Empty State -->
+    <div th:if="${#lists.isEmpty(stepEvents)}" id="emptyTimelineNotice" class="text-center py-5 text-secondary">
+        <i class="fa-solid fa-microscope fs-1 mb-3 text-secondary opacity-50"></i>
+        <h6 class="text-dark fw-bold">No Agent Steps Executed Yet</h6>
+        <p class="small text-secondary mb-0">Ask a question to see real-time reasoning, tool calls, and observations.</p>
+    </div>
+
+    <!-- Step Event Cards -->
+    <div th:each="step : ${stepEvents}"
+         th:classappend="${step.type().getBorderClass()}"
+         class="step-card p-3 mb-2 shadow-sm">
+        <div class="d-flex align-items-center mb-1">
+            <span class="badge bg-light border border-secondary-subtle text-dark font-mono me-2" th:text="'#' + ${step.stepNumber()}">#1</span>
+            <i class="fa-solid me-2 text-primary" th:classappend="${step.type().getIcon()}"></i>
+            <strong class="small text-dark" th:text="${step.title()}">Step Title</strong>
+
+            <span th:if="${step.tokenStats() != null and step.tokenStats().totalTokens() > 0}"
+                  class="badge badge-pill-glow ms-auto">
+                <i class="fa-solid fa-bolt me-1"></i>
+                <span th:text="${step.tokenStats().totalTokens()} + ' toks'">0 toks</span>
+            </span>
+        </div>
+
+        <div th:if="${step.summary() != null and !step.summary().isBlank()}"
+             class="small text-secondary mb-2"
+             th:text="${step.summary()}">
+            Step Summary
+        </div>
+
+        <!-- Dual Request / Response Payload Drawers for LLM Reasoning Steps -->
+        <div th:if="${(step.requestPayload() != null and !step.requestPayload().isBlank()) or (step.responsePayload() != null and !step.responsePayload().isBlank())}" class="mt-2">
+            <details th:if="${step.requestPayload() != null and !step.requestPayload().isBlank()}" class="mb-2">
+                <summary class="small text-primary fw-semibold" style="cursor: pointer;">
+                    <i class="fa-solid fa-arrow-up-right-from-square me-1"></i> View Ask / Prompt Payload
+                </summary>
+                <pre class="payload-box mt-1 mb-0 font-mono"><code th:text="${step.requestPayload()}">{"request": "json"}</code></pre>
+            </details>
+
+            <details th:if="${step.responsePayload() != null and !step.responsePayload().isBlank()}">
+                <summary class="small text-success fw-semibold" style="cursor: pointer;">
+                    <i class="fa-solid fa-reply me-1"></i> View Model Response / Decision
+                </summary>
+                <pre class="payload-box mt-1 mb-0 font-mono"><code th:text="${step.responsePayload()}">{"response": "json"}</code></pre>
+            </details>
+        </div>
+
+        <!-- Single Raw Content Collapsible Drawer for other steps -->
+        <details th:if="${(step.requestPayload() == null or step.requestPayload().isBlank()) and (step.responsePayload() == null or step.responsePayload().isBlank()) and step.rawContent() != null and !step.rawContent().isBlank()}" class="mt-1">
+            <summary class="small text-primary fw-medium" style="cursor: pointer;">
+                <i class="fa-solid fa-code me-1"></i> View Raw Payload
+            </summary>
+            <pre class="payload-box mt-2 mb-0 font-mono"><code th:text="${step.rawContent()}">{"raw": "json"}</code></pre>
+        </details>
+    </div>
+</div>
+</html>

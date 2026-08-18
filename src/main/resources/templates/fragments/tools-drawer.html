@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<!-- Modal: Registered Tools Inspection -->
+<div th:fragment="toolsModal" class="modal fade" id="toolsModal" tabindex="-1" aria-labelledby="toolsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content bg-white border text-dark shadow">
+            <div class="modal-header border-light-subtle">
+                <h5 class="modal-title fw-bold" id="toolsModalLabel">
+                    <i class="fa-solid fa-wrench text-primary me-2"></i> Registered Java Agent Tools
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p class="small text-secondary">
+                    These are the Java methods annotated with <code>@Tool</code> that LangChain4j extracts into JSON Schemas and passes to the Google Gemini model.
+                </p>
+                <div class="list-group list-group-flush">
+                    <div th:each="t : ${tools}" class="list-group-item bg-transparent text-dark border-light-subtle py-3">
+                        <div class="d-flex align-items-center justify-content-between mb-1">
+                            <h6 class="mb-0 text-primary font-mono fw-bold">
+                                <i class="fa-solid fa-cube me-1"></i> <span th:text="${t.name} + '()'">calculate()</span>
+                            </h6>
+                            <span class="badge bg-light border border-secondary-subtle text-secondary font-mono small" th:text="${t.targetClassName}">CalculatorTool</span>
+                        </div>
+                        <p class="small text-secondary mb-2" th:text="${t.description}">Tool Description</p>
+                        <div th:if="${t.parameterSchema != null and !t.parameterSchema.isEmpty()}" class="bg-light p-2 rounded border border-light-subtle small font-mono">
+                            <span class="text-secondary">// Tool JSON Schema:</span><br>
+                            <span class="text-primary font-mono" th:text="${t.parameterSchema}">{parameters}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer border-light-subtle">
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Log and Markdown Transcript Viewer -->
+<div th:fragment="logModal" class="modal fade" id="logViewerModal" tabindex="-1" aria-labelledby="logModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+        <div class="modal-content bg-white border text-dark shadow">
+            <div class="modal-header border-light-subtle">
+                <h5 class="modal-title fw-bold" id="logModalLabel">
+                    <i class="fa-solid fa-file-lines text-primary me-2"></i> Session Disk Audit Transcript
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="logModalBody">
+                <div class="text-center py-5">
+                    <div class="spinner-border text-primary" role="status"></div>
+                </div>
+            </div>
+            <div class="modal-footer border-light-subtle">
+                <a th:href="@{'/session/' + ${sessionId} + '/transcript'}" target="_blank" class="btn btn-outline-primary btn-sm">
+                    <i class="fa-solid fa-download me-1"></i> Raw Markdown
+                </a>
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+</html>

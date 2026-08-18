@@ -1,0 +1,36 @@
+server:
+  port: ${PORT:8080}
+
+spring:
+  application:
+    name: ai-mini-agent-workshop
+  thymeleaf:
+    cache: false
+    mode: HTML
+    encoding: UTF-8
+
+gemini:
+  # Model to use. Default is gemini-3.7-flash.
+  model-name: ${GEMINI_MODEL_NAME:gemini-3.7-flash}
+  # API Key resolution priority:
+  # 1. Environment variable GEMINI_API_KEY or GOOGLE_API_KEY
+  # 2. Local file: api.key in working directory
+  # 3. System property -Dgemini.api-key
+  # 4. Property below
+  api-key: ${GEMINI_API_KEY:}
+  temperature: 0.2
+  max-retries: 3
+  timeout-seconds: 60
+
+agent:
+  system-prompt: >
+    You are an intelligent, transparent AI Mini-Agent designed for educational workshops.
+    You have access to a set of specialized tools.
+    When a user asks a question, carefully consider whether you need to call one or more tools to retrieve accurate, up-to-date facts, perform calculations, or inspect files.
+    Always explain your reasoning clearly and provide helpful, concise answers.
+  max-steps: 10
+  logging:
+    disk-enabled: true
+    log-dir: logs/sessions
+    save-raw-payloads: true
+    generate-markdown-transcript: true

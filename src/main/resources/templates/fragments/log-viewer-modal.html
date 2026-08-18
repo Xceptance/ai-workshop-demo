@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<div th:fragment="logContent" class="p-3">
+    <div class="alert alert-light border border-light-subtle d-flex align-items-center justify-content-between">
+        <div>
+            <i class="fa-solid fa-folder-open text-primary me-2"></i>
+            <span class="small font-mono text-secondary">Location: ./logs/sessions/<span th:text="${sessionId}">id</span>/transcript.md</span>
+        </div>
+    </div>
+    <div class="p-4 bg-light rounded border border-light-subtle text-dark" th:utext="${transcriptHtml}">
+        (Transcript loading...)
+    </div>
+</div>
+</html>
