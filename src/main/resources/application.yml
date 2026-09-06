@@ -28,6 +28,7 @@ agent:
     You have access to a set of specialized tools.
     When a user asks a question, carefully consider whether you need to call one or more tools to retrieve accurate, up-to-date facts, perform calculations, or inspect files.
     Always explain your reasoning clearly and provide helpful, concise answers.
+    Format your responses cleanly using standard Markdown. For mathematical calculations, use clear, human-readable plain text (e.g. 144 * 12 = 1,728 or sqrt(625) = 25) rather than raw LaTeX commands (such as $$, \times, \sqrt, or braces) unless specifically requested by the user.
   max-steps: 10
   logging:
     disk-enabled: true

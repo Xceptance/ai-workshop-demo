@@ -6,6 +6,11 @@ document.addEventListener('DOMContentLoaded', () => {
     initSseStream();
     scrollToBottom('chatScrollArea');
     scrollToBottom('timelineScrollArea');
+    renderAllMath();
+});
+
+window.addEventListener('load', () => {
+    renderAllMath();
 });
 
 let eventSource = null;
@@ -207,4 +212,24 @@ document.body.addEventListener('htmx:afterSwap', function(evt) {
         input.value = '';
         input.focus();
     }
+    renderAllMath();
 });
+
+/**
+ * Render any LaTeX math notation ($$...$$ or $...$) in the chat messages using KaTeX.
+ */
+function renderAllMath() {
+    const chatContainer = document.getElementById('chatScrollArea');
+    if (chatContainer && typeof renderMathInElement === 'function') {
+        renderMathInElement(chatContainer, {
+            delimiters: [
+                {left: '$$', right: '$$', display: false},
+                {left: '$', right: '$', display: false},
+                {left: '\\(', right: '\\)', display: false},
+                {left: '\\[', right: '\\]', display: true}
+            ],
+            throwOnError: false,
+            ignoredTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+        });
+    }
+}
