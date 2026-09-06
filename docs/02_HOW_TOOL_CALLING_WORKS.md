@@ -109,3 +109,44 @@ In our transparent engine:
 4. The LLM reads the error and can either:
    - Attempt a corrected tool call (self-correction).
    - Inform the user politely that the operation failed.
+
+---
+
+## 5. From Local Tools to MCP (Model Context Protocol): Two Sides of the Same Coin
+
+Once you understand how local Java `@Tool` calling works, you already understand the **Model Context Protocol (MCP)**.
+
+MCP does not introduce a new reasoning paradigm. It takes the exact same tool-calling and observation loop we just demystified and decouples it across process or network boundaries using **JSON-RPC 2.0** over `stdio` (pipes) or `SSE` (HTTP streams):
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant Host as Agent Host (Claude Code / Cursor / Spring AI)
+    participant LLM as Reasoning Model (Gemini / Claude)
+    participant MCP as External MCP Server (Python / Node / Go)
+    
+    Note over Host,MCP: 1. Discovery Phase
+    Host->>MCP: JSON-RPC: {"method": "tools/list"}
+    MCP-->>Host: Result: [ {name: "query_database", inputSchema: {...}} ]
+    
+    Note over Host,LLM: 2. Reasoning Phase
+    Host->>LLM: POST prompt + merged JSON Schemas
+    LLM-->>Host: ToolExecutionRequest(name="query_database", args={"sql": "SELECT COUNT(*) FROM users"})
+    
+    Note over Host,MCP: 3. Execution Phase
+    Host->>MCP: JSON-RPC: {"method": "tools/call", "params": {"name": "query_database", "arguments": {...}}}
+    MCP->>MCP: Executes SQL query on Postgres DB
+    MCP-->>Host: Result: {"content": [{"type": "text", "text": "4,120 active users"}]}
+    
+    Note over Host,LLM: 4. Observation & Synthesis
+    Host->>LLM: Append observation back into context
+    LLM-->>Host: Final Response: "There are currently 4,120 active registered users."
+```
+
+### Why MCP and Agents are Inseparable:
+* **The Agent is the Brain & Loop:** The agent owns the iterative cognition—assessing user goals, deciding which tool to call, managing context memory, handling failure loops, and knowing when the task is complete.
+* **MCP is the Universal Interface ("The USB-C Cable"):** MCP standardizes the connection between that brain and external systems. An agent runtime (whether in Java, TypeScript, or Rust) can instantly connect to pre-built MCP servers for GitHub, PostgreSQL, Docker, or Google Cloud without writing custom API adapters.
+* **The Three Core MCP Primitives:**
+  1. **Tools:** Executable actions that alter state or fetch dynamic data (`tools/call`).
+  2. **Resources:** Passive readable context, URIs, and file streams (`resources/read`).
+  3. **Prompts:** Reusable workflow templates and interactive prompt slash commands (`prompts/get`).

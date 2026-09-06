@@ -117,7 +117,9 @@ Explore the detailed guides in the [`docs/`](docs/) directory:
 2. **[02. How Tool Calling Works](docs/02_HOW_TOOL_CALLING_WORKS.md)** — JSON Schema generation, method dispatch, and error handling.
 3. **[03. LangChain4j Architecture](docs/03_LANGCHAIN4J_ARCHITECTURE.md)** — High-level `AiServices` vs. Low-level transparent Java loops.
 4. **[04. Observability & Token Logging](docs/04_OBSERVABILITY_AND_LOGGING.md)** — Inspecting disk traces, token meters, and debugging agent loops.
-5. **[05. Workshop Exercises & Solutions](docs/05_WORKSHOP_EXERCISES.md)** — 5 hands-on challenges for attendees to build custom tools and guardrails.
+5. **[05. Workshop Exercises & Solutions](docs/05_WORKSHOP_EXERCISES.md)** — 13 hands-on progressive challenges (Tools, OpenSpec SDD, ClockMap concurrency, characterization testing, AI code review cycles, style/documentation enforcement, AGENTS.md, UI guidebooks, and custom skills).
+6. **[06. Quality Work with Agents](docs/06_QUALITY_WORK_WITH_AGENTS.md)** — The 4 Pillars: History, Context, Specs (OpenSpec), and Deterministic Engineering Workflows.
+7. **[Workshop Master Planning & Catalog](docs/workshop-planning.md)** — Modular workshop profiles, master content catalog, open standards, and organizational playbooks.
 
 ---
 
