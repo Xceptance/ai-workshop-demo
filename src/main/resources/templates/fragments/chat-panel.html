@@ -56,18 +56,36 @@
     <div class="px-3 py-2 border-top border-light-subtle bg-light flex-shrink-0">
         <div class="d-flex align-items-center gap-2 overflow-x-auto pb-1">
             <span class="small text-secondary fw-semibold"><i class="fa-solid fa-wand-magic-sparkles me-1 text-primary"></i> Try:</span>
-            <button type="button" class="preset-btn" onclick="usePresetPrompt('What is the current server time and OS memory status?')">
-                🕒 Time & System
-            </button>
-            <button type="button" class="preset-btn" onclick="usePresetPrompt('Calculate (144 * 12) + (sqrt of 625). Explain the steps.')">
-                🧮 Math Execution
-            </button>
-            <button type="button" class="preset-btn" onclick="usePresetPrompt('List the files in the workspace directory and check pom.xml')">
-                📂 File Inspection
-            </button>
-            <button type="button" class="preset-btn" onclick="usePresetPrompt('Search what the agent ReAct pattern is and summarize it.')">
-                🔍 Knowledge Search
-            </button>
+            <!-- MCP Mode Presets -->
+            <th:block th:if="${mode == 'mcp'}">
+                <button type="button" class="preset-btn" onclick="usePresetPrompt('What is the current weather in Berlin and Tokyo? Compare their temperatures.')">
+                    🌤️ Live Weather (Open-Meteo)
+                </button>
+                <button type="button" class="preset-btn" onclick="usePresetPrompt('What is the 3-day weather forecast for Paris, France?')">
+                    📅 3-Day Forecast
+                </button>
+                <button type="button" class="preset-btn" onclick="usePresetPrompt('Calculate 2^8 * 15 and retrieve the host system metrics via MCP.')">
+                    🧮 MCP Math & System
+                </button>
+                <button type="button" class="preset-btn" onclick="usePresetPrompt('List the files in the workspace directory using the local MCP server.')">
+                    📁 MCP File Explorer
+                </button>
+            </th:block>
+            <!-- Classic Mode Presets -->
+            <th:block th:unless="${mode == 'mcp'}">
+                <button type="button" class="preset-btn" onclick="usePresetPrompt('What is the current server time and OS memory status?')">
+                    🕒 Time & System
+                </button>
+                <button type="button" class="preset-btn" onclick="usePresetPrompt('Calculate (144 * 12) + (sqrt of 625). Explain the steps.')">
+                    🧮 Math Execution
+                </button>
+                <button type="button" class="preset-btn" onclick="usePresetPrompt('List the files in the workspace directory and check pom.xml')">
+                    📂 File Inspection
+                </button>
+                <button type="button" class="preset-btn" onclick="usePresetPrompt('Search what the agent ReAct pattern is and summarize it.')">
+                    🔍 Knowledge Search
+                </button>
+            </th:block>
         </div>
     </div>
 

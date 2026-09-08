@@ -53,12 +53,42 @@ public class MockLanguageModel implements ChatLanguageModel {
             }
         }
 
-        // Simulate tool calling based on keywords
+        // Check available tool names
+        List<String> availableToolNames = List.of();
+        if (chatRequest.parameters() != null && chatRequest.parameters().toolSpecifications() != null) {
+            availableToolNames = chatRequest.parameters().toolSpecifications().stream()
+                    .map(ToolSpecification::name)
+                    .toList();
+        }
+
+        // 1. Weather Queries
+        if (userText.contains("weather") || userText.contains("forecast") || userText.contains("temperature") || userText.contains("rain")) {
+            if (availableToolNames.contains("get_current_weather")) {
+                String loc = "Berlin";
+                if (userText.contains("tokyo")) loc = "Tokyo";
+                else if (userText.contains("paris")) loc = "Paris";
+                else if (userText.contains("new york")) loc = "New York";
+                else if (userText.contains("london")) loc = "London";
+
+                ToolExecutionRequest req = ToolExecutionRequest.builder()
+                        .id(UUID.randomUUID().toString())
+                        .name("get_current_weather")
+                        .arguments("{\"location\": \"" + loc + "\"}")
+                        .build();
+                return ChatResponse.builder()
+                        .aiMessage(AiMessage.from(List.of(req)))
+                        .tokenUsage(new TokenUsage(110, 30, 140))
+                        .build();
+            }
+        }
+
+        // 2. Calculations
         if (userText.contains("calculate") || userText.contains("+") || userText.contains("*") || userText.contains("multiply") || userText.contains("add")) {
+            String toolName = availableToolNames.contains("calculate") ? "calculate" : "calculate";
             ToolExecutionRequest req = ToolExecutionRequest.builder()
                     .id(UUID.randomUUID().toString())
-                    .name("calculate")
-                    .arguments("{\"operation\": \"MULTIPLY\", \"a\": 42, \"b\": 8}")
+                    .name(toolName)
+                    .arguments("{\"expression\": \"42 * 8\", \"operation\": \"MULTIPLY\", \"a\": 42, \"b\": 8}")
                     .build();
             return ChatResponse.builder()
                     .aiMessage(AiMessage.from(List.of(req)))
@@ -66,10 +96,20 @@ public class MockLanguageModel implements ChatLanguageModel {
                     .build();
         }
 
-        if (userText.contains("time") || userText.contains("date") || userText.contains("system") || userText.contains("os")) {
+        // 3. System Info & Date/Time
+        if (userText.contains("time") || userText.contains("date") || userText.contains("system") || userText.contains("os") || userText.contains("memory")) {
+            String toolName = "getCurrentDateTime";
+            if (availableToolNames.contains("get_system_info")) {
+                toolName = "get_system_info";
+            } else if (availableToolNames.contains("get_current_time")) {
+                toolName = "get_current_time";
+            } else if (availableToolNames.contains("getHostRuntimeMetrics")) {
+                toolName = "getHostRuntimeMetrics";
+            }
+
             ToolExecutionRequest req = ToolExecutionRequest.builder()
                     .id(UUID.randomUUID().toString())
-                    .name("getCurrentDateTime")
+                    .name(toolName)
                     .arguments("{\"timezone\": \"UTC\"}")
                     .build();
             return ChatResponse.builder()
@@ -78,10 +118,12 @@ public class MockLanguageModel implements ChatLanguageModel {
                     .build();
         }
 
+        // 4. File / Directory Inspection
         if (userText.contains("file") || userText.contains("dir") || userText.contains("read") || userText.contains("workspace")) {
+            String toolName = availableToolNames.contains("list_directory") ? "list_directory" : "listDirectory";
             ToolExecutionRequest req = ToolExecutionRequest.builder()
                     .id(UUID.randomUUID().toString())
-                    .name("listDirectory")
+                    .name(toolName)
                     .arguments("{\"relativePath\": \".\"}")
                     .build();
             return ChatResponse.builder()
@@ -90,10 +132,12 @@ public class MockLanguageModel implements ChatLanguageModel {
                     .build();
         }
 
-        if (userText.contains("search") || userText.contains("weather") || userText.contains("who") || userText.contains("what is")) {
+        // 5. Search
+        if (userText.contains("search") || userText.contains("who") || userText.contains("what is")) {
+            String toolName = availableToolNames.contains("search_workspace") ? "search_workspace" : "searchWeb";
             ToolExecutionRequest req = ToolExecutionRequest.builder()
                     .id(UUID.randomUUID().toString())
-                    .name("searchWeb")
+                    .name(toolName)
                     .arguments("{\"query\": \"" + userText.replace("\"", "") + "\"}")
                     .build();
             return ChatResponse.builder()

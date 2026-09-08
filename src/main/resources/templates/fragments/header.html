@@ -13,8 +13,32 @@
             </div>
         </div>
 
+        <!-- Mode Switcher: Classic vs MCP -->
+        <div class="d-flex align-items-center bg-light border border-secondary-subtle rounded-pill p-1">
+            <a th:href="@{'/?sessionId=' + ${sessionId} + '&mode=classic'}" 
+               th:classappend="${mode == null or mode == 'classic'} ? 'btn-primary text-white shadow-sm' : 'text-secondary'"
+               class="btn btn-sm rounded-pill px-3 py-1 fw-medium"
+               title="In-Process Java Reflection Tool Calling">
+                <i class="fa-solid fa-cube me-1"></i> Classic Demo
+            </a>
+            <a th:href="@{'/?sessionId=' + ${sessionId} + '&mode=mcp'}" 
+               th:classappend="${mode == 'mcp'} ? 'btn-dark bg-purple text-white shadow-sm' : 'text-secondary'"
+               class="btn btn-sm rounded-pill px-3 py-1 fw-medium"
+               title="Out-of-Process Model Context Protocol (JSON-RPC 2.0)">
+                <i class="fa-solid fa-network-wired me-1"></i> MCP Demo
+            </a>
+        </div>
+
         <!-- Badges & Runtime Status -->
         <div class="d-flex flex-wrap align-items-center gap-2">
+            <!-- Active Mode Indicator Badge -->
+            <span th:if="${mode == 'mcp'}" class="badge bg-purple-subtle text-purple border border-purple-subtle px-3 py-2 font-mono">
+                <i class="fa-solid fa-network-wired me-1"></i> MCP Active
+            </span>
+            <span th:unless="${mode == 'mcp'}" class="badge bg-primary-subtle text-primary border border-primary-subtle px-3 py-2 font-mono">
+                <i class="fa-solid fa-cube me-1"></i> Reflection Active
+            </span>
+
             <!-- Model Badge -->
             <span class="badge bg-light border border-secondary-subtle text-dark px-3 py-2">
                 <i class="fa-solid fa-brain me-1 text-primary"></i>
@@ -37,12 +61,15 @@
             </span>
 
             <!-- New Session Button -->
-            <a th:href="@{/}" class="btn btn-primary btn-sm ms-2">
+            <a th:href="@{'/?mode=' + ${mode != null ? mode : 'classic'}}" class="btn btn-primary btn-sm ms-2">
                 <i class="fa-solid fa-plus me-1"></i> New Session
             </a>
 
-            <!-- Tools Info Modal Trigger -->
-            <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-toggle="modal" data-bs-target="#toolsModal">
+            <!-- Mode-Specific Inspector Modal Triggers -->
+            <button th:if="${mode == 'mcp'}" type="button" class="btn btn-outline-purple btn-sm border-purple text-purple fw-semibold" data-bs-toggle="modal" data-bs-target="#mcpHubModal">
+                <i class="fa-solid fa-network-wired me-1 text-purple"></i> MCP Hub (<span th:text="${#lists.size(mcpServers)}">2</span>)
+            </button>
+            <button th:unless="${mode == 'mcp'}" type="button" class="btn btn-outline-secondary btn-sm" data-bs-toggle="modal" data-bs-target="#toolsModal">
                 <i class="fa-solid fa-wrench me-1"></i> Tools (<span th:text="${#lists.size(tools)}">4</span>)
             </button>
         </div>

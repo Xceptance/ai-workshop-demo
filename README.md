@@ -72,10 +72,31 @@ Open your browser to: **[http://localhost:8080](http://localhost:8080)**
 | Component | Description |
 |---|---|
 | **Two-Pane Glass-Box Dashboard** | Left: Interactive Chat with prompt presets. Right: Live ReAct execution timeline, step-by-step inspector, and token meters. |
-| **Real-Time Streaming (SSE)** | Steps are broadcast live from the Java engine to the browser via Server-Sent Events (`/api/stream/{sessionId}`). |
-| **Full Disk Audit Logging** | Every conversation turn is saved to `./logs/sessions/{sessionId}/` with `summary.json`, `trace_events.jsonl`, `raw_payloads.json`, and human-readable `transcript.md`. |
-| **Educational Tool Suite** | Included Java tools (`@Tool`): Calculator, System & Time Info, Local File Explorer/Search, and Web Knowledge Lookup. |
+| **Dual-Mode Engine Toggle** | Switch seamlessly in the top navbar between **Classic In-Process Agent** (Java method reflection) and **Model Context Protocol (MCP) Agent** (JSON-RPC 2.0 client-server architecture). |
+| **Interactive MCP Hub & Wire Inspector** | Built-in modal dialog displaying active MCP servers, registered tool schemas (`tools/list`), and microsecond-level wire traffic (`mcp_traffic.jsonl`). |
+| **Real-Time Streaming (SSE)** | Steps and wire events are broadcast live from the Java engine to the browser via Server-Sent Events (`/api/stream/{sessionId}`). |
+| **Full Disk Audit Logging** | Every conversation turn is saved to `./logs/sessions/{sessionId}/` with `summary.json`, `trace_events.jsonl`, `raw_payloads.json`, `mcp_traffic.jsonl`, and human-readable `transcript.md`. |
+| **Extensible Tool Suites** | Classic Java `@Tool` suite + Dual MCP Servers (Local System/Math/Files server + Live Open-Meteo Weather server with zero API keys required). |
 | **Model Configurable** | Defaults to `gemini-3.7-flash` (also supports `gemini-2.0-flash`, `gemini-1.5-flash`, and offline mock). |
+
+---
+
+## 🔌 Dual Mode: Classic In-Process vs. Model Context Protocol (MCP)
+
+The workshop now features two distinct demonstration modes accessible via the top navigation bar:
+
+1. **Classic Demo (In-Process Tools)**:
+   - Tools are native Java methods annotated with `@Tool`.
+   - Executed in-process via reflection inside the Spring Boot container.
+   - Ideal for understanding core ReAct loops and local parameter binding.
+
+2. **MCP Demo (Client-Server Protocol)**:
+   - The agent operates as an **MCP Client** communicating over **JSON-RPC 2.0**.
+   - Tools are hosted on standalone MCP servers:
+     - **Local MCP Server** (`LocalMcpServer`): Exposes calculation, system information, file browsing, and workspace search via JSON-RPC. Can also run as an external CLI process (`stdio`).
+     - **Open-Meteo Weather MCP Server** (`OpenMeteoWeatherMcpServer`): Live global weather forecasting, current conditions, and geocoding via Open-Meteo REST APIs without requiring API keys.
+     - **Remote Diagnostic Endpoint** (`https://mcp.worldweatheronline.com/mcp`): Cloud MCP endpoint monitor.
+   - Live JSON-RPC request and response payloads are captured, timed, and rendered in purple collapsible drawers in the UI timeline.
 
 ---
 
@@ -83,7 +104,7 @@ Open your browser to: **[http://localhost:8080](http://localhost:8080)**
 
 ```
 ai-mini-agent-workshop/
-├── pom.xml                                   # Spring Boot 4.1 & LangChain4j 1.0 dependencies
+├── pom.xml                                   # Spring Boot 4.1 & LangChain4j 1.0 (with langchain4j-mcp)
 ├── README.md                                 # Workshop documentation
 ├── api.key                                   # (Optional) Local API key file
 ├── docs/                                     # In-depth educational guides
@@ -91,19 +112,26 @@ ai-mini-agent-workshop/
 │   ├── 02_HOW_TOOL_CALLING_WORKS.md          # JSON Schemas, parameter binding, observation injection
 │   ├── 03_LANGCHAIN4J_ARCHITECTURE.md        # LangChain4j abstractions vs manual Java loop
 │   ├── 04_OBSERVABILITY_AND_LOGGING.md       # Traces, tokens, cost accounting, debug techniques
-│   └── 05_WORKSHOP_EXERCISES.md              # 5 progressive coding exercises with solutions
+│   ├── 05_WORKSHOP_EXERCISES.md              # 13 hands-on progressive coding exercises with solutions
+│   ├── 06_QUALITY_WORK_WITH_AGENTS.md        # The 4 Pillars: History, Context, Specs, Determinism
+│   ├── 07_MODEL_CONTEXT_PROTOCOL_MCP.md      # MCP Architecture, JSON-RPC 2.0 wire protocol, Stdio/HTTP
+│   └── workshop-planning.md                  # Workshop profiles, master content catalog & playbooks
 ├── src/main/java/com/workshop/agent/
 │   ├── MiniAgentWorkshopApplication.java     # Spring Boot entry point
 │   ├── config/                               # Gemini & ApiKey discovery configuration
-│   ├── engine/                               # TransparentAgentEngine ReAct execution loop
+│   ├── engine/                               # TransparentAgentEngine & McpAgentEngine ReAct execution loops
 │   ├── logging/                              # Disk audit logger, Markdown transcripts, ANSI logs
+│   ├── mcp/                                  # Model Context Protocol implementation
+│   │   ├── client/                           # McpClientManager (discovery, schema mapping, execution)
+│   │   ├── model/                            # McpProtocolMessage, McpWireRecord, McpServerConfig
+│   │   └── server/                           # LocalMcpServer & OpenMeteoWeatherMcpServer
 │   ├── model/                                # Events, Session state, Token metrics, DTOs
 │   ├── tools/                                # Java @Tool components & reflection registry
 │   └── web/                                  # HTMX endpoints, SSE streams, REST controllers
 ├── src/main/resources/
 │   ├── application.yml                       # Agent properties & system prompts
 │   ├── static/                               # Glass-box CSS and reactive JavaScript
-│   └── templates/                            # Thymeleaf & HTMX two-pane templates
+│   └── templates/                            # Thymeleaf & HTMX templates (header, mcp-drawer, execution-step)
 └── logs/sessions/                            # Generated disk audit traces per session
 ```
 
@@ -119,7 +147,8 @@ Explore the detailed guides in the [`docs/`](docs/) directory:
 4. **[04. Observability & Token Logging](docs/04_OBSERVABILITY_AND_LOGGING.md)** — Inspecting disk traces, token meters, and debugging agent loops.
 5. **[05. Workshop Exercises & Solutions](docs/05_WORKSHOP_EXERCISES.md)** — 13 hands-on progressive challenges (Tools, OpenSpec SDD, ClockMap concurrency, characterization testing, AI code review cycles, style/documentation enforcement, AGENTS.md, UI guidebooks, and custom skills).
 6. **[06. Quality Work with Agents](docs/06_QUALITY_WORK_WITH_AGENTS.md)** — The 4 Pillars: History, Context, Specs (OpenSpec), and Deterministic Engineering Workflows.
-7. **[Workshop Master Planning & Catalog](docs/workshop-planning.md)** — Modular workshop profiles, master content catalog, open standards, and organizational playbooks.
+7. **[07. Model Context Protocol (MCP)](docs/07_MODEL_CONTEXT_PROTOCOL_MCP.md)** — MCP architectural deep-dive, JSON-RPC 2.0 wire protocol, tool negotiation, transports (stdio vs HTTP/SSE), and building custom MCP servers in Java.
+8. **[Workshop Master Planning & Catalog](docs/workshop-planning.md)** — Modular workshop profiles, master content catalog, open standards, and organizational playbooks.
 
 ---
 

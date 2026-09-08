@@ -15,6 +15,7 @@ public class AgentSession {
 
     private final String id;
     private String title;
+    private String mode = "classic"; // "classic" or "mcp"
     private final String modelName;
     private final String systemPrompt;
     private final double temperature;
@@ -29,6 +30,16 @@ public class AgentSession {
     public AgentSession(String id, String title, String modelName, String systemPrompt, double temperature) {
         this.id = id;
         this.title = title;
+        this.modelName = modelName;
+        this.systemPrompt = systemPrompt;
+        this.temperature = temperature;
+        this.createdAt = Instant.now();
+    }
+
+    public AgentSession(String id, String title, String mode, String modelName, String systemPrompt, double temperature) {
+        this.id = id;
+        this.title = title;
+        this.mode = mode != null ? mode : "classic";
         this.modelName = modelName;
         this.systemPrompt = systemPrompt;
         this.temperature = temperature;
@@ -81,6 +92,18 @@ public class AgentSession {
 
     public void setTitle(String title) {
         this.title = title;
+    }
+
+    public String getMode() {
+        return mode;
+    }
+
+    public String mode() {
+        return mode;
+    }
+
+    public void setMode(String mode) {
+        this.mode = mode != null ? mode : "classic";
     }
 
     public String getModelName() {

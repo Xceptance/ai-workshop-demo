@@ -32,8 +32,11 @@ public class ConsoleAnsiLogger {
             case TOOL_CALL_REQUEST -> YELLOW;
             case TOOL_EXECUTION -> RED;
             case TOOL_OBSERVATION -> GREEN;
+            case MCP_HANDSHAKE, MCP_DISCOVERY, MCP_TOOL_CALL -> MAGENTA;
+            case MCP_TOOL_RESULT -> GREEN;
             case FINAL_SYNTHESIS -> GREEN + BOLD;
             case AGENT_ERROR -> RED + BOLD;
+            default -> BLUE;
         };
 
         String banner = String.format("%s┌── [STEP %d: %s] %s %s", color, event.stepNumber(), event.type(), event.title(), RESET);

@@ -67,9 +67,21 @@ public class MarkdownTranscriptGenerator {
                         .append(event.tokenStats().formattedDuration()).append("`\n\n");
             }
 
-            if (event.rawContent() != null && !event.rawContent().isBlank()) {
+            if (event.requestPayload() != null && !event.requestPayload().isBlank()) {
+                sb.append("<details><summary>📤 View Request / Ask Payload</summary>\n\n");
+                sb.append("```json\n").append(event.requestPayload().trim()).append("\n```\n\n");
+                sb.append("</details>\n\n");
+            }
+            if (event.responsePayload() != null && !event.responsePayload().isBlank()) {
+                sb.append("<details><summary>📥 View Response / Decision Payload</summary>\n\n");
+                sb.append("```json\n").append(event.responsePayload().trim()).append("\n```\n\n");
+                sb.append("</details>\n\n");
+            }
+            if ((event.requestPayload() == null || event.requestPayload().isBlank())
+                    && (event.responsePayload() == null || event.responsePayload().isBlank())
+                    && event.rawContent() != null && !event.rawContent().isBlank()) {
                 sb.append("<details><summary>🔍 View Raw Step Payload</summary>\n\n");
-                sb.append("```\n").append(event.rawContent().trim()).append("\n```\n\n");
+                sb.append("```json\n").append(event.rawContent().trim()).append("\n```\n\n");
                 sb.append("</details>\n\n");
             }
         }

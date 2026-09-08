@@ -73,6 +73,13 @@ function handleLiveStepEvent(event) {
     }
 
     if (timelineContainer) {
+        // Prevent duplicate step cards if already rendered (e.g. SSE duplicate or reconnect)
+        const stepCardId = `step-card-${event.stepNumber}`;
+        if (document.getElementById(stepCardId)) {
+            console.debug(`[SSE] Step #${event.stepNumber} already rendered, skipping duplicate.`);
+            return;
+        }
+
         const stepHtml = createStepCardHtml(event);
         timelineContainer.insertAdjacentHTML('beforeend', stepHtml);
         highlightAllPayloadBoxes(timelineContainer);
@@ -135,21 +142,29 @@ function createStepCardHtml(step) {
 
     let payloadBoxesHtml = '';
     if (reqSafe || respSafe) {
+        const isMcp = step.type === 'MCP_TOOL_CALL';
+        const reqTitle = isMcp ? 'View MCP Request (JSON-RPC 2.0)' : 'View Ask / Prompt Payload';
+        const respTitle = isMcp ? 'View MCP Response (JSON-RPC 2.0)' : 'View Model Response / Decision';
+        const reqLabel = isMcp ? 'MCP JSON-RPC Request' : 'Model Ask / Prompt';
+        const respLabel = isMcp ? 'MCP JSON-RPC Response' : 'Model Response';
+        const reqColor = isMcp ? 'text-purple' : 'text-primary';
+        const reqIcon = isMcp ? 'fa-network-wired' : 'fa-arrow-up-right-from-square';
+
         payloadBoxesHtml = `
         <div class="mt-2">
             ${reqSafe ? `
             <details class="mb-2">
-                <summary class="small text-primary fw-semibold" style="cursor: pointer;">
-                    <i class="fa-solid fa-arrow-up-right-from-square me-1"></i> View Ask / Prompt Payload
+                <summary class="small ${reqColor} fw-semibold" style="cursor: pointer;">
+                    <i class="fa-solid ${reqIcon} me-1"></i> ${reqTitle}
                 </summary>
-                ${createPayloadBoxHtml(reqSafe, titleSafe, stepNum, 'Ask / Prompt Payload', 'JSON', 'Model Ask / Prompt')}
+                ${createPayloadBoxHtml(reqSafe, titleSafe, stepNum, reqTitle, 'JSON-RPC', reqLabel)}
             </details>` : ''}
             ${respSafe ? `
             <details>
                 <summary class="small text-success fw-semibold" style="cursor: pointer;">
-                    <i class="fa-solid fa-reply me-1"></i> View Model Response / Decision
+                    <i class="fa-solid fa-reply me-1"></i> ${respTitle}
                 </summary>
-                ${createPayloadBoxHtml(respSafe, titleSafe, stepNum, 'Model Response / Decision', 'JSON', 'Model Response')}
+                ${createPayloadBoxHtml(respSafe, titleSafe, stepNum, respTitle, 'JSON-RPC', respLabel)}
             </details>` : ''}
         </div>`;
     } else if (rawSafe) {
@@ -163,7 +178,7 @@ function createStepCardHtml(step) {
     }
 
     return `
-    <div class="step-card ${borderClass} p-3 mb-2 shadow-sm animate__animated animate__fadeIn">
+    <div id="step-card-${stepNum}" data-step-number="${stepNum}" class="step-card ${borderClass} p-3 mb-2 shadow-sm animate__animated animate__fadeIn">
         <div class="d-flex align-items-center mb-1">
             <span class="badge bg-light border border-secondary-subtle text-dark font-mono me-2">#${stepNum}</span>
             <i class="fa-solid ${iconClass} me-2 text-primary"></i>
@@ -184,6 +199,10 @@ function getBorderClass(type) {
         case 'TOOL_CALL_REQUEST': return 'border-warning';
         case 'TOOL_EXECUTION': return 'border-danger';
         case 'TOOL_OBSERVATION': return 'border-info';
+        case 'MCP_HANDSHAKE':
+        case 'MCP_DISCOVERY':
+        case 'MCP_TOOL_CALL': return 'border-purple';
+        case 'MCP_TOOL_RESULT': return 'border-info';
         case 'FINAL_SYNTHESIS': return 'border-success';
         case 'AGENT_ERROR': return 'border-danger';
         default: return 'border-secondary';
@@ -199,6 +218,10 @@ function getIconClass(type) {
         case 'TOOL_CALL_REQUEST': return 'fa-wrench';
         case 'TOOL_EXECUTION': return 'fa-gear';
         case 'TOOL_OBSERVATION': return 'fa-clipboard-check';
+        case 'MCP_HANDSHAKE': return 'fa-handshake';
+        case 'MCP_DISCOVERY': return 'fa-cubes';
+        case 'MCP_TOOL_CALL': return 'fa-network-wired';
+        case 'MCP_TOOL_RESULT': return 'fa-arrow-down-short-wide';
         case 'FINAL_SYNTHESIS': return 'fa-circle-check';
         case 'AGENT_ERROR': return 'fa-triangle-exclamation';
         default: return 'fa-circle-info';

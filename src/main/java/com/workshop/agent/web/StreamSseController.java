@@ -20,10 +20,16 @@ public class StreamSseController {
     private static final Logger log = LoggerFactory.getLogger(StreamSseController.class);
 
     private final TransparentAgentEngine agentEngine;
+    private final com.workshop.agent.engine.McpAgentEngine mcpAgentEngine;
     private final ObjectMapper objectMapper;
 
-    public StreamSseController(TransparentAgentEngine agentEngine, ObjectMapper objectMapper) {
+    public StreamSseController(
+            TransparentAgentEngine agentEngine,
+            com.workshop.agent.engine.McpAgentEngine mcpAgentEngine,
+            ObjectMapper objectMapper
+    ) {
         this.agentEngine = agentEngine;
+        this.mcpAgentEngine = mcpAgentEngine;
         this.objectMapper = objectMapper;
     }
 
@@ -45,9 +51,13 @@ public class StreamSseController {
 
         agentEngine.registerEventListener(sessionId, listener);
 
-        emitter.onCompletion(() -> agentEngine.removeEventListener(sessionId, listener));
-        emitter.onTimeout(() -> agentEngine.removeEventListener(sessionId, listener));
-        emitter.onError(e -> agentEngine.removeEventListener(sessionId, listener));
+        Runnable cleanup = () -> {
+            agentEngine.removeEventListener(sessionId, listener);
+        };
+
+        emitter.onCompletion(cleanup);
+        emitter.onTimeout(cleanup);
+        emitter.onError(e -> cleanup.run());
 
         try {
             // Send initial connection heartbeat

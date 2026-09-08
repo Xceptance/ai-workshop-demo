@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<!-- Modal: MCP Servers & Wire Traffic Hub -->
+<div th:fragment="mcpModal" class="modal fade" id="mcpHubModal" tabindex="-1" aria-labelledby="mcpHubModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+        <div class="modal-content bg-white border text-dark shadow">
+            
+            <div class="modal-header border-light-subtle bg-light bg-opacity-50">
+                <div class="d-flex align-items-center gap-2">
+                    <div class="rounded-2 p-2 bg-purple bg-opacity-10 text-purple border border-purple border-opacity-25">
+                        <i class="fa-solid fa-network-wired fs-5"></i>
+                    </div>
+                    <div>
+                        <h5 class="modal-title fw-bold text-dark mb-0" id="mcpHubModalLabel">
+                            Model Context Protocol (MCP) Hub
+                        </h5>
+                        <small class="text-secondary">Distributed Tool Calling over JSON-RPC 2.0 (Local STDIO & Remote HTTP)</small>
+                    </div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+
+            <div class="modal-body p-4">
+                
+                <!-- Nav Tabs for MCP Hub -->
+                <ul class="nav nav-pills mb-3 border-bottom pb-2" id="mcpTab" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active btn-sm" id="servers-tab" data-bs-toggle="pill" data-bs-target="#mcpServersPane" type="button" role="tab">
+                            <i class="fa-solid fa-server me-1"></i> Connected Servers (<span th:text="${#lists.size(mcpServers)}">3</span>)
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link btn-sm" id="tools-tab" data-bs-toggle="pill" data-bs-target="#mcpToolsPane" type="button" role="tab">
+                            <i class="fa-solid fa-cubes me-1"></i> Discovered Tools (<span th:text="${#lists.size(mcpTools)}">9</span>)
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link btn-sm" id="wire-tab" data-bs-toggle="pill" data-bs-target="#mcpWirePane" type="button" role="tab">
+                            <i class="fa-solid fa-bolt-lightning me-1"></i> Wire Traffic Log (<span th:text="${#lists.size(mcpTraffic)}">0</span>)
+                        </button>
+                    </li>
+                </ul>
+
+                <div class="tab-content" id="mcpTabContent">
+                    
+                    <!-- TAB 1: Servers List -->
+                    <div class="tab-pane fade show active" id="mcpServersPane" role="tabpanel">
+                        <div class="row g-3">
+                            <div th:each="srv : ${mcpServers}" class="col-md-6">
+                                <div class="card h-100 border-light-subtle shadow-sm">
+                                    <div class="card-header bg-white border-light-subtle d-flex justify-content-between align-items-center py-2">
+                                        <div class="d-flex align-items-center gap-2">
+                                            <i class="fa-solid fa-cube text-purple"></i>
+                                            <strong class="text-dark" th:text="${srv.name()}">Local Workshop Tools</strong>
+                                        </div>
+                                        <span th:if="${srv.isConnected()}" class="badge bg-success-subtle text-success border border-success-subtle">
+                                            <i class="fa-solid fa-circle-check me-1"></i> Connected
+                                        </span>
+                                        <span th:unless="${srv.isConnected()}" class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle">
+                                            <i class="fa-solid fa-triangle-exclamation me-1"></i> <span th:text="${srv.status()}">Offline</span>
+                                        </span>
+                                    </div>
+                                    <div class="card-body py-3">
+                                        <p class="small text-secondary mb-2" th:text="${srv.description()}">Server description</p>
+                                        <div class="bg-light p-2 rounded border border-light-subtle small font-mono mb-2">
+                                            <div class="d-flex justify-content-between">
+                                                <span class="text-secondary">Transport:</span>
+                                                <span class="text-dark fw-bold" th:text="${srv.transport()}">LOOPBACK</span>
+                                            </div>
+                                            <div class="d-flex justify-content-between mt-1 text-truncate">
+                                                <span class="text-secondary">Endpoint:</span>
+                                                <span class="text-primary text-truncate ms-2" th:text="${srv.endpoint()}">endpoint</span>
+                                            </div>
+                                            <div class="d-flex justify-content-between mt-1">
+                                                <span class="text-secondary">Round-Trip Latency:</span>
+                                                <span class="text-success" th:text="${srv.lastLatencyMs()} + ' ms'">2 ms</span>
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <small class="text-secondary fw-semibold">Tools Exposed (<span th:text="${srv.toolCount()}">0</span>):</small>
+                                            <div class="d-flex flex-wrap gap-1 mt-1">
+                                                <span th:each="tname : ${srv.toolNames()}" class="badge bg-light border border-secondary-subtle text-dark font-mono small" th:text="${tname}">tool</span>
+                                            </div>
+                                        </div>
+                                        <div th:if="${srv.diagnosticNote() != null}" class="mt-2 text-muted small">
+                                            <i class="fa-solid fa-circle-info me-1"></i> <span th:text="${srv.diagnosticNote()}">Diagnostics</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- TAB 2: Discovered Tools Schemas -->
+                    <div class="tab-pane fade" id="mcpToolsPane" role="tabpanel">
+                        <div class="list-group list-group-flush">
+                            <div th:each="spec : ${mcpTools}" class="list-group-item bg-transparent text-dark border-light-subtle py-3">
+                                <div class="d-flex align-items-center justify-content-between mb-1">
+                                    <h6 class="mb-0 text-purple font-mono fw-bold">
+                                        <i class="fa-solid fa-gear me-1"></i> <span th:text="${spec.name()} + '()'">get_weather()</span>
+                                    </h6>
+                                    <span class="badge badge-purple font-mono small">MCP Tool</span>
+                                </div>
+                                <p class="small text-secondary mb-2" th:text="${spec.description()}">Tool Description</p>
+                                <div th:if="${spec.parameters() != null}" class="bg-light p-2 rounded border border-light-subtle small font-mono">
+                                    <span class="text-secondary">// Model JSON Schema:</span><br>
+                                    <pre class="mb-0 text-primary font-mono"><code th:text="${spec.parameters().toString()}">{parameters}</code></pre>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- TAB 3: Wire Traffic Log -->
+                    <div class="tab-pane fade" id="mcpWirePane" role="tabpanel">
+                        <div th:if="${#lists.isEmpty(mcpTraffic)}" class="text-center py-4 text-secondary">
+                            <i class="fa-solid fa-network-wired fs-2 mb-2 text-muted"></i>
+                            <p class="small mb-0">No wire traffic recorded for this session yet. Ask a question to see JSON-RPC messages!</p>
+                        </div>
+                        <div th:unless="${#lists.isEmpty(mcpTraffic)}" class="table-responsive">
+                            <table class="table table-sm table-hover font-mono small">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Direction</th>
+                                        <th>Server</th>
+                                        <th>Method</th>
+                                        <th>Latency</th>
+                                        <th>Payload (JSON-RPC)</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr th:each="rec : ${mcpTraffic}">
+                                        <td>
+                                            <span th:if="${rec.direction() == 'OUTBOUND_REQUEST'}" class="badge bg-primary-subtle text-primary">
+                                                <i class="fa-solid fa-arrow-up-right-from-square me-1"></i> Request
+                                            </span>
+                                            <span th:if="${rec.direction() == 'INBOUND_RESPONSE'}" class="badge bg-success-subtle text-success">
+                                                <i class="fa-solid fa-arrow-down-left-and-up-right-to-center me-1"></i> Response
+                                            </span>
+                                            <span th:if="${rec.direction() == 'NOTIFICATION'}" class="badge bg-secondary-subtle text-secondary">
+                                                Notify
+                                            </span>
+                                        </td>
+                                        <td class="text-truncate" style="max-width: 140px;" th:text="${rec.serverName()}">server</td>
+                                        <td><strong class="text-purple" th:text="${rec.method()}">tools/call</strong></td>
+                                        <td><span th:text="${rec.latencyMs()} + ' ms'">0 ms</span></td>
+                                        <td>
+                                            <details>
+                                                <summary class="text-secondary" style="cursor: pointer;">View Payload</summary>
+                                                <pre class="payload-box mt-1 mb-0"><code th:text="${rec.payloadJson()}">{}</code></pre>
+                                            </details>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                </div>
+
+            </div>
+
+            <div class="modal-footer border-light-subtle bg-light bg-opacity-25">
+                <a th:href="@{'/api/mcp/traffic/' + ${sessionId}}" target="_blank" class="btn btn-outline-secondary btn-sm">
+                    <i class="fa-solid fa-download me-1"></i> Raw Wire JSON
+                </a>
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Close</button>
+            </div>
+
+        </div>
+    </div>
+</div>
+</html>

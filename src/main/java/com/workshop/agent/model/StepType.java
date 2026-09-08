@@ -11,6 +11,10 @@ public enum StepType {
     TOOL_CALL_REQUEST("Tool Selection & JSON Args", "fa-wrench", "border-warning"),
     TOOL_EXECUTION("Java Method Execution", "fa-gear", "border-danger"),
     TOOL_OBSERVATION("Observation / Tool Result", "fa-clipboard-check", "border-info"),
+    MCP_HANDSHAKE("MCP Server Handshake", "fa-handshake", "border-purple"),
+    MCP_DISCOVERY("MCP Tool Discovery", "fa-cubes", "border-purple"),
+    MCP_TOOL_CALL("MCP Wire Tool Call", "fa-network-wired", "border-purple"),
+    MCP_TOOL_RESULT("MCP Wire Tool Result", "fa-arrow-down-short-wide", "border-info"),
     FINAL_SYNTHESIS("Final Response Synthesis", "fa-check-circle", "border-success"),
     AGENT_ERROR("Agent Error / Retry", "fa-triangle-exclamation", "border-danger");
 

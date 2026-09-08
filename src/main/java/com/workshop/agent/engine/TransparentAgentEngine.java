@@ -50,8 +50,8 @@ public class TransparentAgentEngine {
 
     // Active sessions cache
     private final Map<String, AgentSession> sessions = new ConcurrentHashMap<>();
-    // Real-time event listeners per session (e.g. SSE web streams)
-    private final Map<String, List<Consumer<AgentStepEvent>>> sessionListeners = new ConcurrentHashMap<>();
+    // Real-time event listeners per session (e.g. SSE web streams) - Set prevents duplicate listener registrations
+    private final Map<String, Set<Consumer<AgentStepEvent>>> sessionListeners = new ConcurrentHashMap<>();
 
     public TransparentAgentEngine(
             ChatLanguageModel chatLanguageModel,
@@ -86,13 +86,13 @@ public class TransparentAgentEngine {
     }
 
     public void registerEventListener(String sessionId, Consumer<AgentStepEvent> listener) {
-        sessionListeners.computeIfAbsent(sessionId, k -> new ArrayList<>()).add(listener);
+        sessionListeners.computeIfAbsent(sessionId, k -> ConcurrentHashMap.newKeySet()).add(listener);
     }
 
     public void removeEventListener(String sessionId, Consumer<AgentStepEvent> listener) {
-        List<Consumer<AgentStepEvent>> list = sessionListeners.get(sessionId);
-        if (list != null) {
-            list.remove(listener);
+        Set<Consumer<AgentStepEvent>> set = sessionListeners.get(sessionId);
+        if (set != null) {
+            set.remove(listener);
         }
     }
 
@@ -382,15 +382,15 @@ public class TransparentAgentEngine {
         return fallbackDto;
     }
 
-    private void publishStep(AgentSession session, AgentStepEvent event) {
+    public void publishStep(AgentSession session, AgentStepEvent event) {
         session.addStepEvent(event);
         consoleAnsiLogger.logStep(event);
         sessionDiskLogger.appendStepEvent(session, event);
 
         // Notify SSE listeners
-        List<Consumer<AgentStepEvent>> listeners = sessionListeners.get(session.getId());
+        Set<Consumer<AgentStepEvent>> listeners = sessionListeners.get(session.getId());
         if (listeners != null) {
-            for (Consumer<AgentStepEvent> listener : new ArrayList<>(listeners)) {
+            for (Consumer<AgentStepEvent> listener : listeners) {
                 try {
                     listener.accept(event);
                 } catch (Exception e) {

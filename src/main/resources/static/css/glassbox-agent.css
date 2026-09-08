@@ -140,6 +140,9 @@ code, pre, .font-mono {
 .step-card.border-warning { border-left-color: var(--accent-amber) !important; }
 .step-card.border-danger { border-left-color: var(--accent-rose) !important; }
 .step-card.border-success { border-left-color: var(--accent-emerald) !important; }
+.step-card.border-purple { border-left-color: var(--accent-purple) !important; }
+.badge-purple { background-color: rgba(124, 58, 237, 0.1); color: var(--accent-purple); border: 1px solid rgba(124, 58, 237, 0.25); }
+.text-purple { color: var(--accent-purple) !important; }
 
 /* Badges & Metrics */
 .badge-pill-glow {

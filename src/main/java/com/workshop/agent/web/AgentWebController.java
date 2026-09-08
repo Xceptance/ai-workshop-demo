@@ -27,6 +27,8 @@ import java.util.UUID;
 public class AgentWebController {
 
     private final TransparentAgentEngine agentEngine;
+    private final com.workshop.agent.engine.McpAgentEngine mcpAgentEngine;
+    private final com.workshop.agent.mcp.client.McpClientManager mcpClientManager;
     private final ToolRegistry toolRegistry;
     private final GeminiProperties geminiProperties;
     private final ApiKeyResolver.ResolvedKey resolvedKey;
@@ -35,6 +37,8 @@ public class AgentWebController {
 
     public AgentWebController(
             TransparentAgentEngine agentEngine,
+            com.workshop.agent.engine.McpAgentEngine mcpAgentEngine,
+            com.workshop.agent.mcp.client.McpClientManager mcpClientManager,
             ToolRegistry toolRegistry,
             GeminiProperties geminiProperties,
             ApiKeyResolver.ResolvedKey resolvedKey,
@@ -42,6 +46,8 @@ public class AgentWebController {
             MarkdownRenderer markdownRenderer
     ) {
         this.agentEngine = agentEngine;
+        this.mcpAgentEngine = mcpAgentEngine;
+        this.mcpClientManager = mcpClientManager;
         this.toolRegistry = toolRegistry;
         this.geminiProperties = geminiProperties;
         this.resolvedKey = resolvedKey;
@@ -50,12 +56,19 @@ public class AgentWebController {
     }
 
     @GetMapping("/")
-    public String index(@RequestParam(value = "sessionId", required = false) String sessionId, Model model) {
+    public String index(
+            @RequestParam(value = "sessionId", required = false) String sessionId,
+            @RequestParam(value = "mode", required = false) String mode,
+            Model model
+    ) {
         if (sessionId == null || sessionId.isBlank()) {
             sessionId = UUID.randomUUID().toString().substring(0, 8);
         }
 
         AgentSession session = agentEngine.getOrCreateSession(sessionId);
+        if (mode != null && !mode.isBlank()) {
+            session.setMode(mode.trim().toLowerCase());
+        }
         populateModel(model, session);
         return "index";
     }
@@ -68,11 +81,27 @@ public class AgentWebController {
     ) {
         AgentSession session = agentEngine.getOrCreateSession(sessionId);
         if (prompt != null && !prompt.isBlank()) {
-            agentEngine.processTurn(sessionId, prompt.trim());
+            if ("mcp".equalsIgnoreCase(session.getMode())) {
+                mcpAgentEngine.processTurn(sessionId, prompt.trim());
+            } else {
+                agentEngine.processTurn(sessionId, prompt.trim());
+            }
         }
 
         populateModel(model, session);
         return "fragments/chat-panel :: chatContent";
+    }
+
+    @PostMapping("/session/{sessionId}/mode")
+    public String switchMode(
+            @PathVariable("sessionId") String sessionId,
+            @RequestParam("mode") String mode,
+            Model model
+    ) {
+        AgentSession session = agentEngine.getOrCreateSession(sessionId);
+        session.setMode(mode);
+        populateModel(model, session);
+        return "redirect:/?sessionId=" + sessionId + "&mode=" + mode;
     }
 
     @PostMapping("/session/clear")
@@ -134,13 +163,29 @@ public class AgentWebController {
         return "fragments/log-viewer-modal :: logContent";
     }
 
+    @GetMapping("/api/mcp/servers")
+    @ResponseBody
+    public ResponseEntity<?> getMcpServers() {
+        return ResponseEntity.ok(mcpClientManager.getServerConfigs());
+    }
+
+    @GetMapping("/api/mcp/traffic/{sessionId}")
+    @ResponseBody
+    public ResponseEntity<?> getMcpSessionTraffic(@PathVariable("sessionId") String sessionId) {
+        return ResponseEntity.ok(mcpClientManager.getSessionTraffic(sessionId));
+    }
+
     private void populateModel(Model model, AgentSession session) {
         model.addAttribute("agentSession", session);
         model.addAttribute("sessionId", session.getId());
+        model.addAttribute("mode", session.getMode());
         model.addAttribute("messages", session.getMessages());
         model.addAttribute("stepEvents", session.getStepEvents());
         model.addAttribute("tokenStats", session.getTotalTokenStats());
         model.addAttribute("tools", toolRegistry.getToolDtos());
+        model.addAttribute("mcpServers", mcpClientManager.getServerConfigs());
+        model.addAttribute("mcpTools", mcpClientManager.getDiscoveredToolSpecifications());
+        model.addAttribute("mcpTraffic", mcpClientManager.getSessionTraffic(session.getId()));
         model.addAttribute("modelName", geminiProperties.getModelName());
         model.addAttribute("apiKeyInfo", resolvedKey);
         model.addAttribute("recentSessions", sessionDiskLogger.listRecentSessionSummaries());

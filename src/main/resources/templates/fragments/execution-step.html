@@ -10,6 +10,8 @@
 
     <!-- Step Event Cards -->
     <div th:each="step : ${stepEvents}"
+         th:id="'step-card-' + ${step.stepNumber()}"
+         th:data-step-number="${step.stepNumber()}"
          th:classappend="${step.type().getBorderClass()}"
          class="step-card p-3 mb-2 shadow-sm">
         <div class="d-flex align-items-center mb-1">
@@ -33,14 +35,18 @@
         <!-- Dual Request / Response Payload Drawers for LLM Reasoning Steps -->
         <div th:if="${(step.requestPayload() != null and !step.requestPayload().isBlank()) or (step.responsePayload() != null and !step.responsePayload().isBlank())}" class="mt-2">
             <details th:if="${step.requestPayload() != null and !step.requestPayload().isBlank()}" class="mb-2">
-                <summary class="small text-primary fw-semibold" style="cursor: pointer;">
+                <summary th:if="${step.type().name() == 'MCP_TOOL_CALL'}" class="small text-purple fw-semibold" style="cursor: pointer;">
+                    <i class="fa-solid fa-network-wired me-1"></i> View MCP Request (JSON-RPC 2.0)
+                </summary>
+                <summary th:unless="${step.type().name() == 'MCP_TOOL_CALL'}" class="small text-primary fw-semibold" style="cursor: pointer;">
                     <i class="fa-solid fa-arrow-up-right-from-square me-1"></i> View Ask / Prompt Payload
                 </summary>
                 <div class="payload-wrapper">
                     <div class="payload-toolbar">
                         <div class="d-flex align-items-center gap-2">
-                            <span class="payload-type-badge font-mono">JSON</span>
-                            <span class="text-secondary small">Model Ask / Prompt</span>
+                            <span th:if="${step.type().name() == 'MCP_TOOL_CALL'}" class="payload-type-badge font-mono bg-purple text-white">JSON-RPC</span>
+                            <span th:unless="${step.type().name() == 'MCP_TOOL_CALL'}" class="payload-type-badge font-mono">JSON</span>
+                            <span class="text-secondary small" th:text="${step.type().name() == 'MCP_TOOL_CALL' ? 'MCP JSON-RPC tools/call Request' : 'Model Ask / Prompt'}">Model Ask / Prompt</span>
                         </div>
                         <div class="d-flex align-items-center gap-1">
                             <button type="button" class="payload-btn payload-copy-btn" title="Copy raw payload to clipboard">
@@ -57,7 +63,7 @@
                     <div class="payload-box-container">
                         <pre class="payload-box font-mono"
                              tabindex="0"
-                             th:attr="data-step-title=${step.title()},data-step-number=${step.stepNumber()},data-payload-title='Ask / Prompt Payload'"
+                             th:attr="data-step-title=${step.title()},data-step-number=${step.stepNumber()},data-payload-title=${step.type().name() == 'MCP_TOOL_CALL' ? 'MCP tools/call Request' : 'Ask / Prompt Payload'}"
                              title="Click to open Fullscreen Overlay"><code th:text="${step.requestPayload()}">{"request": "json"}</code></pre>
                         <div class="payload-hover-hint">
                             <i class="fa-solid fa-maximize me-1"></i> Click for Fullscreen
@@ -67,14 +73,18 @@
             </details>
 
             <details th:if="${step.responsePayload() != null and !step.responsePayload().isBlank()}">
-                <summary class="small text-success fw-semibold" style="cursor: pointer;">
+                <summary th:if="${step.type().name() == 'MCP_TOOL_CALL'}" class="small text-success fw-semibold" style="cursor: pointer;">
+                    <i class="fa-solid fa-reply me-1"></i> View MCP Response (JSON-RPC 2.0)
+                </summary>
+                <summary th:unless="${step.type().name() == 'MCP_TOOL_CALL'}" class="small text-success fw-semibold" style="cursor: pointer;">
                     <i class="fa-solid fa-reply me-1"></i> View Model Response / Decision
                 </summary>
                 <div class="payload-wrapper">
                     <div class="payload-toolbar">
                         <div class="d-flex align-items-center gap-2">
-                            <span class="payload-type-badge font-mono">JSON</span>
-                            <span class="text-secondary small">Model Response</span>
+                            <span th:if="${step.type().name() == 'MCP_TOOL_CALL'}" class="payload-type-badge font-mono bg-purple text-white">JSON-RPC</span>
+                            <span th:unless="${step.type().name() == 'MCP_TOOL_CALL'}" class="payload-type-badge font-mono">JSON</span>
+                            <span class="text-secondary small" th:text="${step.type().name() == 'MCP_TOOL_CALL' ? 'MCP JSON-RPC tools/call Response' : 'Model Response'}">Model Response</span>
                         </div>
                         <div class="d-flex align-items-center gap-1">
                             <button type="button" class="payload-btn payload-copy-btn" title="Copy raw payload to clipboard">
