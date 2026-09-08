@@ -195,14 +195,210 @@ code, pre, .font-mono {
   to { transform: rotate(360deg); }
 }
 
-/* Payload Accordion */
-.payload-box {
+/* Payload Accordion & High-Contrast Light Theme Viewer */
+.payload-wrapper {
+  margin-top: 6px;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.payload-toolbar {
   background: #f8fafc;
-  border: 1px solid var(--border-subtle);
-  border-radius: 6px;
-  padding: 10px;
+  border: 1px solid #cbd5e1;
+  border-bottom: 1px solid #e2e8f0;
+  border-radius: 8px 8px 0 0;
+  padding: 6px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.payload-type-badge {
+  background: #e2e8f0;
+  color: #1e293b;
+  border: 1px solid #cbd5e1;
+  border-radius: 4px;
+  padding: 2px 7px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.payload-btn {
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  color: #334155;
   font-size: 0.75rem;
-  color: #0369a1;
-  max-height: 250px;
-  overflow-y: auto;
+  font-weight: 500;
+  padding: 3px 9px;
+  border-radius: 5px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  transition: all 0.15s ease-in-out;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+}
+
+.payload-btn:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+  border-color: #94a3b8;
+}
+
+.payload-btn:active {
+  transform: translateY(1px);
+}
+
+.payload-btn.btn-fullscreen {
+  background: #eff6ff;
+  border-color: #bfdbfe;
+  color: #1d4ed8;
+  font-weight: 600;
+}
+
+.payload-btn.btn-fullscreen:hover {
+  background: #dbeafe;
+  border-color: #93c5fd;
+  color: #1e40af;
+}
+
+.payload-btn.btn-copied {
+  background: #f0fdf4 !important;
+  border-color: #86efac !important;
+  color: #15803d !important;
+}
+
+.payload-box-container {
+  position: relative;
+}
+
+.payload-box {
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-top: none;
+  border-radius: 0 0 8px 8px;
+  padding: 12px 14px;
+  font-size: 0.8125rem;
+  line-height: 1.55;
+  color: #0f172a; /* Deep Charcoal Slate for maximum legibility */
+  max-height: 420px; /* Taller default view */
+  min-height: 100px;
+  overflow: auto;
+  resize: vertical; /* Enable native vertical resize */
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.03);
+  margin-bottom: 0;
+  cursor: pointer;
+  transition: border-color 0.15s ease;
+}
+
+.payload-box:hover {
+  border-color: #94a3b8;
+}
+
+.payload-box.expanded {
+  max-height: none !important;
+  height: auto !important;
+  resize: vertical;
+}
+
+.payload-hover-hint {
+  position: absolute;
+  bottom: 10px;
+  right: 24px;
+  background: rgba(255, 255, 255, 0.94);
+  border: 1px solid #cbd5e1;
+  backdrop-filter: blur(4px);
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #1d4ed8;
+  padding: 3px 10px;
+  border-radius: 12px;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  transform: translateY(3px);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+}
+
+.payload-box-container:hover .payload-hover-hint {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* High-Contrast Light Theme Syntax Highlighting */
+.json-key {
+  color: #1e40af; /* Deep Navy Blue */
+  font-weight: 600;
+}
+
+.json-string {
+  color: #166534; /* Deep Forest Green */
+  font-weight: 500;
+}
+
+.json-number {
+  color: #b91c1c; /* Deep Crimson */
+  font-weight: 600;
+}
+
+.json-boolean {
+  color: #6b21a8; /* Deep Purple */
+  font-weight: 600;
+}
+
+.json-null {
+  color: #64748b; /* Slate Gray */
+  font-style: italic;
+  font-weight: 600;
+}
+
+.json-punct {
+  color: #334155; /* Dark Slate */
+}
+
+.search-highlight {
+  background-color: #fef08a;
+  color: #854d0e;
+  padding: 1px 3px;
+  border-radius: 3px;
+  font-weight: bold;
+}
+
+/* Fullscreen Light Modal Styles */
+#payloadViewerModal .modal-content {
+  background: #ffffff;
+  color: #0f172a;
+}
+
+.payload-fullscreen-container {
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - 140px);
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.payload-code-view {
+  flex: 1 1 0;
+  min-height: 0;
+  overflow: auto;
+  padding: 14px 16px;
+  background: #ffffff;
+  color: #0f172a;
+  font-size: 0.84rem;
+  line-height: 1.6;
+  font-family: 'JetBrains Mono', 'Fira Code', Consolas, monospace;
+}
+
+.payload-code-view.wrap-lines {
+  white-space: pre-wrap !important;
+  word-break: break-all;
+}
+
+.payload-code-view:not(.wrap-lines) {
+  white-space: pre !important;
 }

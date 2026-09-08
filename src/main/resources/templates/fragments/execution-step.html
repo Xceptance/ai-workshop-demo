@@ -36,14 +36,68 @@
                 <summary class="small text-primary fw-semibold" style="cursor: pointer;">
                     <i class="fa-solid fa-arrow-up-right-from-square me-1"></i> View Ask / Prompt Payload
                 </summary>
-                <pre class="payload-box mt-1 mb-0 font-mono"><code th:text="${step.requestPayload()}">{"request": "json"}</code></pre>
+                <div class="payload-wrapper">
+                    <div class="payload-toolbar">
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="payload-type-badge font-mono">JSON</span>
+                            <span class="text-secondary small">Model Ask / Prompt</span>
+                        </div>
+                        <div class="d-flex align-items-center gap-1">
+                            <button type="button" class="payload-btn payload-copy-btn" title="Copy raw payload to clipboard">
+                                <i class="fa-regular fa-copy"></i> <span>Copy</span>
+                            </button>
+                            <button type="button" class="payload-btn payload-expand-btn" title="Toggle box height (expand/collapse)">
+                                <i class="fa-solid fa-up-down"></i> <span>Expand</span>
+                            </button>
+                            <button type="button" class="payload-btn btn-fullscreen payload-fullscreen-btn" title="Open Fullscreen Overlay">
+                                <i class="fa-solid fa-expand"></i> <span>Fullscreen</span>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="payload-box-container">
+                        <pre class="payload-box font-mono"
+                             tabindex="0"
+                             th:attr="data-step-title=${step.title()},data-step-number=${step.stepNumber()},data-payload-title='Ask / Prompt Payload'"
+                             title="Click to open Fullscreen Overlay"><code th:text="${step.requestPayload()}">{"request": "json"}</code></pre>
+                        <div class="payload-hover-hint">
+                            <i class="fa-solid fa-maximize me-1"></i> Click for Fullscreen
+                        </div>
+                    </div>
+                </div>
             </details>
 
             <details th:if="${step.responsePayload() != null and !step.responsePayload().isBlank()}">
                 <summary class="small text-success fw-semibold" style="cursor: pointer;">
                     <i class="fa-solid fa-reply me-1"></i> View Model Response / Decision
                 </summary>
-                <pre class="payload-box mt-1 mb-0 font-mono"><code th:text="${step.responsePayload()}">{"response": "json"}</code></pre>
+                <div class="payload-wrapper">
+                    <div class="payload-toolbar">
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="payload-type-badge font-mono">JSON</span>
+                            <span class="text-secondary small">Model Response</span>
+                        </div>
+                        <div class="d-flex align-items-center gap-1">
+                            <button type="button" class="payload-btn payload-copy-btn" title="Copy raw payload to clipboard">
+                                <i class="fa-regular fa-copy"></i> <span>Copy</span>
+                            </button>
+                            <button type="button" class="payload-btn payload-expand-btn" title="Toggle box height (expand/collapse)">
+                                <i class="fa-solid fa-up-down"></i> <span>Expand</span>
+                            </button>
+                            <button type="button" class="payload-btn btn-fullscreen payload-fullscreen-btn" title="Open Fullscreen Overlay">
+                                <i class="fa-solid fa-expand"></i> <span>Fullscreen</span>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="payload-box-container">
+                        <pre class="payload-box font-mono"
+                             tabindex="0"
+                             th:attr="data-step-title=${step.title()},data-step-number=${step.stepNumber()},data-payload-title='Model Response / Decision'"
+                             title="Click to open Fullscreen Overlay"><code th:text="${step.responsePayload()}">{"response": "json"}</code></pre>
+                        <div class="payload-hover-hint">
+                            <i class="fa-solid fa-maximize me-1"></i> Click for Fullscreen
+                        </div>
+                    </div>
+                </div>
             </details>
         </div>
 
@@ -52,7 +106,34 @@
             <summary class="small text-primary fw-medium" style="cursor: pointer;">
                 <i class="fa-solid fa-code me-1"></i> View Raw Payload
             </summary>
-            <pre class="payload-box mt-2 mb-0 font-mono"><code th:text="${step.rawContent()}">{"raw": "json"}</code></pre>
+            <div class="payload-wrapper">
+                <div class="payload-toolbar">
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="payload-type-badge font-mono">PAYLOAD</span>
+                        <span class="text-secondary small">Raw Content</span>
+                    </div>
+                    <div class="d-flex align-items-center gap-1">
+                        <button type="button" class="payload-btn payload-copy-btn" title="Copy raw payload to clipboard">
+                            <i class="fa-regular fa-copy"></i> <span>Copy</span>
+                        </button>
+                        <button type="button" class="payload-btn payload-expand-btn" title="Toggle box height (expand/collapse)">
+                            <i class="fa-solid fa-up-down"></i> <span>Expand</span>
+                        </button>
+                        <button type="button" class="payload-btn btn-fullscreen payload-fullscreen-btn" title="Open Fullscreen Overlay">
+                            <i class="fa-solid fa-expand"></i> <span>Fullscreen</span>
+                        </button>
+                    </div>
+                </div>
+                <div class="payload-box-container">
+                    <pre class="payload-box font-mono"
+                         tabindex="0"
+                         th:attr="data-step-title=${step.title()},data-step-number=${step.stepNumber()},data-payload-title='Raw Payload'"
+                         title="Click to open Fullscreen Overlay"><code th:text="${step.rawContent()}">{"raw": "json"}</code></pre>
+                    <div class="payload-hover-hint">
+                        <i class="fa-solid fa-maximize me-1"></i> Click for Fullscreen
+                    </div>
+                </div>
+            </div>
         </details>
     </div>
 </div>
