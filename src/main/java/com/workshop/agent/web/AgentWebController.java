@@ -184,6 +184,7 @@ public class AgentWebController {
             @RequestParam(value = "modelName", required = false) String modelName,
             @RequestParam(value = "customModelName", required = false) String customModelName,
             @RequestParam(value = "thinkingLevel", required = false) String thinkingLevel,
+            @RequestParam(value = "showReasoning", required = false) Boolean showReasoning,
             Model model
     ) {
         AgentSession session = agentEngine.getOrCreateSession(sessionId);
@@ -205,8 +206,28 @@ public class AgentWebController {
             session.setThinkingLevel(thinkingLevel.trim().toLowerCase());
         }
 
+        if (showReasoning != null) {
+            session.setShowReasoning(showReasoning);
+        }
+
         populateModel(model, session);
         return "redirect:/?sessionId=" + sessionId + "&mode=" + session.getMode();
+    }
+
+    @PostMapping("/session/{sessionId}/toggle-reasoning")
+    @ResponseBody
+    public ResponseEntity<?> toggleReasoning(
+            @PathVariable("sessionId") String sessionId,
+            @RequestParam(value = "show", required = false) Boolean show
+    ) {
+        AgentSession session = agentEngine.getOrCreateSession(sessionId);
+        boolean newState = (show != null) ? show : !session.isShowReasoning();
+        session.setShowReasoning(newState);
+        return ResponseEntity.ok(java.util.Map.of(
+                "status", "success",
+                "sessionId", sessionId,
+                "showReasoning", session.isShowReasoning()
+        ));
     }
 
     @PostMapping(value = "/api/session/{sessionId}/model")
@@ -254,6 +275,7 @@ public class AgentWebController {
         model.addAttribute("mcpTraffic", mcpClientManager.getSessionTraffic(session.getId()));
         model.addAttribute("modelName", session.getModelName() != null ? session.getModelName() : geminiProperties.getModelName());
         model.addAttribute("thinkingLevel", session.getThinkingLevel() != null ? session.getThinkingLevel() : "medium");
+        model.addAttribute("showReasoning", session.isShowReasoning());
         model.addAttribute("availableModels", dynamicChatModelService.getAvailableModels());
         model.addAttribute("apiKeyInfo", resolvedKey);
         model.addAttribute("recentSessions", sessionDiskLogger.listRecentSessionSummaries());

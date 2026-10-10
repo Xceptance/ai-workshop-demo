@@ -264,16 +264,46 @@ public class McpAgentEngine {
             // Check if Model Decided to Invoke MCP Tools
             if (aiMessage.hasToolExecutionRequests()) {
                 List<ToolExecutionRequest> toolRequests = aiMessage.toolExecutionRequests();
+                String thinking = aiMessage.thinking();
+
+                List<?> formattedToolRequests = toolRequests.stream()
+                        .map(this::formatToolExecutionRequest)
+                        .toList();
+
+                Map<String, Object> responseMap = new LinkedHashMap<>();
+                responseMap.put("text", aiMessage.text() != null ? aiMessage.text() : "");
+                if (thinking != null && !thinking.isBlank()) {
+                    responseMap.put("thinking", thinking);
+                }
+                responseMap.put("toolRequests", formattedToolRequests);
+
+                Map<String, Object> unifiedPayload = new LinkedHashMap<>();
+                unifiedPayload.put("request", modelRequestPayload);
+                unifiedPayload.put("response", responseMap);
+
+                rawPayloadAuditList.add(Map.of(
+                        "iteration", loopIteration,
+                        "turnPayload", unifiedPayload
+                ));
 
                 String requestJson = toJson(modelRequestPayload);
-                String responseJson = toJson(Map.of(
-                        "text", aiMessage.text() != null ? aiMessage.text() : "",
-                        "toolRequests", toolRequests.stream().map(this::formatToolExecutionRequest).toList()
-                ));
+                String responseJson = toJson(responseMap);
 
                 String cachedSummary = stepStats.cachedTokens() > 0
                         ? " [" + stepStats.cachedTokens() + " cached / " + stepStats.cacheHitPercentage() + "% hit]"
                         : "";
+
+                Map<String, Object> stepMeta = new LinkedHashMap<>();
+                stepMeta.put("iteration", loopIteration);
+                stepMeta.put("model", session.getModelName());
+                stepMeta.put("thinkingLevel", session.getThinkingLevel());
+                stepMeta.put("toolCount", toolRequests.size());
+                stepMeta.put("cachedTokens", stepStats.cachedTokens());
+                stepMeta.put("text", aiMessage.text() != null ? aiMessage.text() : "");
+                if (thinking != null && !thinking.isBlank()) {
+                    stepMeta.put("thinking", thinking);
+                }
+
                 AgentStepEvent reasoningEvent = AgentStepEvent.of(
                         sessionId,
                         currentStepNumber++,
@@ -284,13 +314,7 @@ public class McpAgentEngine {
                         requestJson,
                         responseJson,
                         stepStats,
-                        Map.of(
-                                "iteration", loopIteration,
-                                "model", session.getModelName(),
-                                "thinkingLevel", session.getThinkingLevel(),
-                                "toolCount", toolRequests.size(),
-                                "cachedTokens", stepStats.cachedTokens()
-                        )
+                        stepMeta
                 );
                 publishStep(session, reasoningEvent);
                 turnStepEvents.add(reasoningEvent);
@@ -353,13 +377,40 @@ public class McpAgentEngine {
                 // Final Synthesis Reached!
                 String finalText = aiMessage.text() != null ? aiMessage.text() : "(No response synthesized)";
                 String formattedHtml = markdownRenderer.renderHtml(finalText);
+                String thinking = aiMessage.thinking();
+
+                Map<String, Object> responseMap = new LinkedHashMap<>();
+                responseMap.put("finalAnswer", finalText);
+                if (thinking != null && !thinking.isBlank()) {
+                    responseMap.put("thinking", thinking);
+                }
+
+                Map<String, Object> unifiedPayload = new LinkedHashMap<>();
+                unifiedPayload.put("request", modelRequestPayload);
+                unifiedPayload.put("response", responseMap);
+
+                rawPayloadAuditList.add(Map.of(
+                        "iteration", loopIteration,
+                        "turnPayload", unifiedPayload
+                ));
 
                 String requestJson = toJson(modelRequestPayload);
-                String responseJson = toJson(Map.of("finalAnswer", finalText));
+                String responseJson = toJson(responseMap);
 
                 String cachedSummary = stepStats.cachedTokens() > 0
                         ? " [" + stepStats.cachedTokens() + " cached / " + stepStats.cacheHitPercentage() + "% hit]"
                         : "";
+
+                Map<String, Object> stepMeta = new LinkedHashMap<>();
+                stepMeta.put("iteration", loopIteration);
+                stepMeta.put("model", session.getModelName());
+                stepMeta.put("thinkingLevel", session.getThinkingLevel());
+                stepMeta.put("cachedTokens", stepStats.cachedTokens());
+                stepMeta.put("length", finalText.length());
+                if (thinking != null && !thinking.isBlank()) {
+                    stepMeta.put("thinking", thinking);
+                }
+
                 AgentStepEvent finalEvent = AgentStepEvent.of(
                         sessionId,
                         currentStepNumber++,
@@ -370,13 +421,7 @@ public class McpAgentEngine {
                         requestJson,
                         responseJson,
                         stepStats,
-                        Map.of(
-                                "iteration", loopIteration,
-                                "model", session.getModelName(),
-                                "thinkingLevel", session.getThinkingLevel(),
-                                "cachedTokens", stepStats.cachedTokens(),
-                                "length", finalText.length()
-                        )
+                        stepMeta
                 );
                 publishStep(session, finalEvent);
                 turnStepEvents.add(finalEvent);

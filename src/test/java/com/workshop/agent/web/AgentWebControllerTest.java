@@ -37,7 +37,8 @@ class AgentWebControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(view().name("index"))
                 .andExpect(model().attribute("modelName", "gemini-3.8-flash"))
-                .andExpect(model().attribute("thinkingLevel", "medium"));
+                .andExpect(model().attribute("thinkingLevel", "medium"))
+                .andExpect(model().attribute("showReasoning", true));
     }
 
     @Test
@@ -63,6 +64,20 @@ class AgentWebControllerTest {
                         .param("thinkingLevel", "high"))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/?sessionId=settings-session&mode=classic"));
+    }
+
+    @Test
+    void testToggleReasoningEndpoint() throws Exception {
+        mockMvc.perform(post("/session/toggle-session/toggle-reasoning")
+                        .param("show", "false"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("success"))
+                .andExpect(jsonPath("$.showReasoning").value(false));
+
+        mockMvc.perform(post("/session/toggle-session/toggle-reasoning"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("success"))
+                .andExpect(jsonPath("$.showReasoning").value(true));
     }
 
     @Test

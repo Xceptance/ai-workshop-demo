@@ -65,10 +65,20 @@
                 <div class="glass-panel d-flex flex-column h-100 overflow-hidden">
                     <!-- Inspector Header & Token Meter -->
                     <div class="p-3 border-bottom border-light-subtle d-flex flex-wrap align-items-center justify-content-between gap-2 flex-shrink-0 bg-white">
-                        <div class="d-flex align-items-center gap-2">
+                        <div class="d-flex align-items-center gap-3">
                             <h6 class="mb-0 text-dark fw-bold">
                                 <i class="fa-solid fa-microscope text-primary me-1"></i> Under-The-Hood Execution Inspector
                             </h6>
+                            <!-- Demo Switch for Model Reasoning Traces -->
+                            <div class="form-check form-switch d-inline-flex align-items-center gap-1 mb-0" title="Toggle Model Reasoning / Thinking traces in the inspector during live demos">
+                                <input class="form-check-input mt-0" type="checkbox" role="switch" id="toggleReasoningSwitch"
+                                       th:checked="${showReasoning}"
+                                       th:attr="data-session-id=${sessionId}"
+                                       onchange="toggleReasoningTrace(this.checked, this.getAttribute('data-session-id'))">
+                                <label class="form-check-label small fw-semibold text-secondary user-select-none" for="toggleReasoningSwitch">
+                                    <i class="fa-solid fa-brain text-warning me-1"></i>Reasoning
+                                </label>
+                            </div>
                         </div>
                         
                         <!-- Token & Latency Meter -->

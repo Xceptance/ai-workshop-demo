@@ -18,6 +18,7 @@ public class AgentSession {
     private String mode = "classic"; // "classic" or "mcp"
     private String modelName;
     private String thinkingLevel = "medium"; // "off", "low", "medium", "high", "dynamic"
+    private boolean showReasoning = true; // Toggle to expose model reasoning / internal thoughts in execution inspector
     private final String systemPrompt;
     private final double temperature;
 
@@ -123,6 +124,18 @@ public class AgentSession {
 
     public void setThinkingLevel(String thinkingLevel) {
         this.thinkingLevel = thinkingLevel != null ? thinkingLevel.trim().toLowerCase() : "medium";
+    }
+
+    public boolean isShowReasoning() {
+        return showReasoning;
+    }
+
+    public boolean showReasoning() {
+        return showReasoning;
+    }
+
+    public void setShowReasoning(boolean showReasoning) {
+        this.showReasoning = showReasoning;
     }
 
     public String getSystemPrompt() {

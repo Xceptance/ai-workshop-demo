@@ -207,6 +207,26 @@ function createStepCardHtml(step) {
         </details>`;
     }
 
+    let reasoningBoxHtml = '';
+    const thinkingText = (step.metadata && step.metadata.thinking) ? String(step.metadata.thinking) : '';
+    if (thinkingText.trim().length > 0) {
+        const reasoningSwitch = document.getElementById('toggleReasoningSwitch');
+        const isVisible = reasoningSwitch ? reasoningSwitch.checked : true;
+        const hiddenClass = isVisible ? '' : 'd-none';
+        const thinkingSafe = escapeHtml(thinkingText);
+        reasoningBoxHtml = `
+        <div class="model-reasoning-container mt-2 ${hiddenClass}">
+            <details class="reasoning-details mb-2 border rounded-3 bg-warning-subtle border-warning-subtle p-2" open>
+                <summary class="small text-warning-emphasis fw-bold d-flex align-items-center gap-2" style="cursor: pointer;">
+                    <i class="fa-solid fa-brain text-warning"></i>
+                    <span>Model Thought Trace / Reasoning</span>
+                    <span class="badge bg-warning text-dark font-mono ms-auto">THINKING</span>
+                </summary>
+                <div class="model-reasoning-body mt-2 pt-2 border-top border-warning-subtle small font-mono text-dark" style="white-space: pre-wrap; font-size: 0.82rem; line-height: 1.45; max-height: 280px; overflow-y: auto;">${thinkingSafe}</div>
+            </details>
+        </div>`;
+    }
+
     return `
     <div id="step-card-${stepNum}" data-step-number="${stepNum}" class="step-card ${borderClass} p-3 mb-2 shadow-sm animate__animated animate__fadeIn">
         <div class="d-flex align-items-center flex-wrap gap-2 mb-1">
@@ -218,6 +238,7 @@ function createStepCardHtml(step) {
             ${statsBadge}
         </div>
         ${summarySafe ? `<div class="small text-secondary mb-2">${summarySafe}</div>` : ''}
+        ${reasoningBoxHtml}
         ${payloadBoxesHtml}
     </div>`;
 }
@@ -774,3 +795,53 @@ document.addEventListener('input', function(e) {
         });
     }
 });
+
+/**
+ * Live Demo Switch - Toggle Model Reasoning & Thought Traces
+ */
+window.toggleReasoningTrace = function(show, sessionId) {
+    // 1. Immediately toggle all reasoning boxes in the DOM (0ms latency for smooth live demos)
+    const reasoningContainers = document.querySelectorAll('.model-reasoning-container');
+    reasoningContainers.forEach(container => {
+        if (show) {
+            container.classList.remove('d-none');
+        } else {
+            container.classList.add('d-none');
+        }
+    });
+
+    // 2. Sync switches if both inspector header and modal exist
+    const inspectorSwitch = document.getElementById('toggleReasoningSwitch');
+    if (inspectorSwitch && inspectorSwitch.checked !== show) {
+        inspectorSwitch.checked = show;
+    }
+    const modalSwitch = document.getElementById('modalShowReasoningSwitch');
+    if (modalSwitch && modalSwitch.checked !== show) {
+        modalSwitch.checked = show;
+    }
+
+    // 3. Persist session preference to backend
+    if (sessionId) {
+        fetch(`/session/${sessionId}/toggle-reasoning?show=${show}`, {
+            method: 'POST',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            console.debug('[DEMO-SWITCH] Reasoning visibility toggled:', data);
+        })
+        .catch(err => {
+            console.warn('[DEMO-SWITCH] Failed to persist reasoning toggle to server:', err);
+        });
+    }
+};
+
+document.addEventListener('change', function(e) {
+    if (e.target && e.target.id === 'modalShowReasoningSwitch') {
+        const sessionId = document.getElementById('toggleReasoningSwitch')?.getAttribute('data-session-id') || '';
+        window.toggleReasoningTrace(e.target.checked, sessionId);
+    }
+});
+

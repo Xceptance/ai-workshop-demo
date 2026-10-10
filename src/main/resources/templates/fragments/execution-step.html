@@ -58,6 +58,22 @@
             Step Summary
         </div>
 
+        <!-- Model Reasoning / Internal Thought Trace Drawer -->
+        <div th:if="${step.metadata() != null and step.metadata().get('thinking') != null and !step.metadata().get('thinking').toString().isBlank()}"
+             class="model-reasoning-container mt-2"
+             th:classappend="${showReasoning == false} ? 'd-none' : ''">
+            <details class="reasoning-details mb-2 border rounded-3 bg-warning-subtle border-warning-subtle p-2" open>
+                <summary class="small text-warning-emphasis fw-bold d-flex align-items-center gap-2" style="cursor: pointer;">
+                    <i class="fa-solid fa-brain text-warning"></i>
+                    <span>Model Thought Trace / Reasoning</span>
+                    <span class="badge bg-warning text-dark font-mono ms-auto">THINKING</span>
+                </summary>
+                <div class="model-reasoning-body mt-2 pt-2 border-top border-warning-subtle small font-mono text-dark" style="white-space: pre-wrap; font-size: 0.82rem; line-height: 1.45; max-height: 280px; overflow-y: auto;" th:text="${step.metadata().get('thinking')}">
+                    Model internal thinking process...
+                </div>
+            </details>
+        </div>
+
         <!-- Dual Request / Response Payload Drawers for LLM Reasoning Steps -->
         <div th:if="${(step.requestPayload() != null and !step.requestPayload().isBlank()) or (step.responsePayload() != null and !step.responsePayload().isBlank())}" class="mt-2">
             <details th:if="${step.requestPayload() != null and !step.requestPayload().isBlank()}" class="mb-2">

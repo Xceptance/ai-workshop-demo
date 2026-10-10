@@ -283,12 +283,17 @@ public class TransparentAgentEngine {
                         .map(this::formatToolExecutionRequest)
                         .toList();
 
+                String thinking = aiMessage.thinking();
+                Map<String, Object> responseMap = new LinkedHashMap<>();
+                responseMap.put("text", aiMessage.text() != null ? aiMessage.text() : "");
+                if (thinking != null && !thinking.isBlank()) {
+                    responseMap.put("thinking", thinking);
+                }
+                responseMap.put("toolRequests", formattedToolRequests);
+
                 Map<String, Object> unifiedPayload = new LinkedHashMap<>();
                 unifiedPayload.put("request", modelRequestPayload);
-                unifiedPayload.put("response", Map.of(
-                        "text", aiMessage.text() != null ? aiMessage.text() : "",
-                        "toolRequests", formattedToolRequests
-                ));
+                unifiedPayload.put("response", responseMap);
 
                 rawPayloadAuditList.add(Map.of(
                         "iteration", loopIteration,
@@ -298,16 +303,24 @@ public class TransparentAgentEngine {
                 ));
 
                 String requestJson = toJson(modelRequestPayload);
-                String responseJson = toJson(Map.of(
-                        "text", aiMessage.text() != null ? aiMessage.text() : "",
-                        "toolRequests", formattedToolRequests
-                ));
+                String responseJson = toJson(responseMap);
 
                 String cachedSummary = stepStats.cachedTokens() > 0
                         ? " [" + stepStats.cachedTokens() + " cached / " + stepStats.cacheHitPercentage() + "% hit]"
                         : "";
                 String stepSummary = String.format("Sent context (%d messages, %d tools). Model requested: %s%s",
                         conversationMessages.size(), toolSpecs.size(), toolRequests.stream().map(ToolExecutionRequest::name).toList(), cachedSummary);
+
+                Map<String, Object> stepMeta = new LinkedHashMap<>();
+                stepMeta.put("iteration", loopIteration);
+                stepMeta.put("model", session.getModelName());
+                stepMeta.put("thinkingLevel", session.getThinkingLevel());
+                stepMeta.put("toolCount", toolRequests.size());
+                stepMeta.put("cachedTokens", stepStats.cachedTokens());
+                stepMeta.put("text", aiMessage.text() != null ? aiMessage.text() : "");
+                if (thinking != null && !thinking.isBlank()) {
+                    stepMeta.put("thinking", thinking);
+                }
 
                 AgentStepEvent reasoningEvent = AgentStepEvent.of(
                         sessionId,
@@ -319,14 +332,7 @@ public class TransparentAgentEngine {
                         requestJson,
                         responseJson,
                         stepStats,
-                        Map.of(
-                                "iteration", loopIteration,
-                                "model", session.getModelName(),
-                                "thinkingLevel", session.getThinkingLevel(),
-                                "toolCount", toolRequests.size(),
-                                "cachedTokens", stepStats.cachedTokens(),
-                                "text", aiMessage.text() != null ? aiMessage.text() : ""
-                        )
+                        stepMeta
                 );
                 publishStep(session, reasoningEvent);
                 turnStepEvents.add(reasoningEvent);
@@ -384,12 +390,17 @@ public class TransparentAgentEngine {
                 // Final Synthesis Reached!
                 String finalText = aiMessage.text() != null ? aiMessage.text() : "(No text response generated)";
                 String formattedHtml = markdownRenderer.renderHtml(finalText);
+                String thinking = aiMessage.thinking();
+
+                Map<String, Object> responseMap = new LinkedHashMap<>();
+                responseMap.put("finalAnswer", finalText);
+                if (thinking != null && !thinking.isBlank()) {
+                    responseMap.put("thinking", thinking);
+                }
 
                 Map<String, Object> unifiedPayload = new LinkedHashMap<>();
                 unifiedPayload.put("request", modelRequestPayload);
-                unifiedPayload.put("response", Map.of(
-                        "text", finalText
-                ));
+                unifiedPayload.put("response", responseMap);
 
                 rawPayloadAuditList.add(Map.of(
                         "iteration", loopIteration,
@@ -399,15 +410,23 @@ public class TransparentAgentEngine {
                 ));
 
                 String requestJson = toJson(modelRequestPayload);
-                String responseJson = toJson(Map.of(
-                        "finalAnswer", finalText
-                ));
+                String responseJson = toJson(responseMap);
 
                 String cachedSummary = stepStats.cachedTokens() > 0
                         ? " [" + stepStats.cachedTokens() + " cached / " + stepStats.cacheHitPercentage() + "% hit]"
                         : "";
                 String finalSummary = String.format("Sent context (%d messages, %d tools). Completed reasoning cycle in %d iteration(s).%s",
                         conversationMessages.size(), toolSpecs.size(), loopIteration, cachedSummary);
+
+                Map<String, Object> stepMeta = new LinkedHashMap<>();
+                stepMeta.put("iteration", loopIteration);
+                stepMeta.put("model", session.getModelName());
+                stepMeta.put("thinkingLevel", session.getThinkingLevel());
+                stepMeta.put("cachedTokens", stepStats.cachedTokens());
+                stepMeta.put("finalTextLength", finalText.length());
+                if (thinking != null && !thinking.isBlank()) {
+                    stepMeta.put("thinking", thinking);
+                }
 
                 AgentStepEvent finalEvent = AgentStepEvent.of(
                         sessionId,
@@ -419,13 +438,7 @@ public class TransparentAgentEngine {
                         requestJson,
                         responseJson,
                         stepStats,
-                        Map.of(
-                                "iteration", loopIteration,
-                                "model", session.getModelName(),
-                                "thinkingLevel", session.getThinkingLevel(),
-                                "cachedTokens", stepStats.cachedTokens(),
-                                "finalTextLength", finalText.length()
-                        )
+                        stepMeta
                 );
                 publishStep(session, finalEvent);
                 turnStepEvents.add(finalEvent);
