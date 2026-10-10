@@ -13,6 +13,7 @@ import org.springframework.http.MediaType;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.model;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
@@ -34,7 +35,9 @@ class AgentWebControllerTest {
     void testIndexPageRendering() throws Exception {
         mockMvc.perform(get("/"))
                 .andExpect(status().isOk())
-                .andExpect(view().name("index"));
+                .andExpect(view().name("index"))
+                .andExpect(model().attribute("modelName", "gemini-3.8-flash"))
+                .andExpect(model().attribute("thinkingLevel", "medium"));
     }
 
     @Test

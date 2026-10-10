@@ -17,7 +17,7 @@ public class AgentSession {
     private String title;
     private String mode = "classic"; // "classic" or "mcp"
     private String modelName;
-    private String thinkingLevel = "dynamic"; // "off", "low", "medium", "high", "dynamic"
+    private String thinkingLevel = "medium"; // "off", "low", "medium", "high", "dynamic"
     private final String systemPrompt;
     private final double temperature;
 
@@ -122,7 +122,7 @@ public class AgentSession {
     }
 
     public void setThinkingLevel(String thinkingLevel) {
-        this.thinkingLevel = thinkingLevel != null ? thinkingLevel.trim().toLowerCase() : "dynamic";
+        this.thinkingLevel = thinkingLevel != null ? thinkingLevel.trim().toLowerCase() : "medium";
     }
 
     public String getSystemPrompt() {

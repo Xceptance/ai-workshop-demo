@@ -18,7 +18,7 @@ class DynamicChatModelServiceTest {
     void setUp() {
         GeminiProperties props = new GeminiProperties();
         props.setApiKey("test-key");
-        props.setModelName("gemini-3.7-flash");
+        props.setModelName("gemini-3.8-flash");
         ApiKeyResolver.ResolvedKey resolvedKey = new ApiKeyResolver.ResolvedKey("test-key", "Test", true);
         service = new DynamicChatModelService(props, resolvedKey);
     }
@@ -26,6 +26,7 @@ class DynamicChatModelServiceTest {
     @Test
     void testInitialAvailableModels() {
         List<String> models = service.getAvailableModels();
+        assertEquals("gemini-3.8-flash", models.get(0), "Default model should be gemini-3.8-flash");
         assertTrue(models.contains("gemini-3.7-flash"));
         assertTrue(models.contains("gemini-3.8-flash"));
         assertTrue(models.contains("gemini-3.5-flash-lite"));

@@ -44,7 +44,7 @@ public class AgentConfig {
 
         String modelName = geminiProperties.getModelName();
         if (modelName == null || modelName.isBlank()) {
-            modelName = "gemini-3.7-flash";
+            modelName = "gemini-3.8-flash";
         }
 
         log.info("=== INITIALIZING GOOGLE GEMINI CHAT MODEL ===");

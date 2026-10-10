@@ -10,8 +10,10 @@ spring:
     encoding: UTF-8
 
 gemini:
-  # Model to use. Default is gemini-3.7-flash.
-  model-name: ${GEMINI_MODEL_NAME:gemini-3.7-flash}
+  # Model to use. Default is gemini-3.8-flash.
+  model-name: ${GEMINI_MODEL_NAME:gemini-3.8-flash}
+  # Thinking level to use. Default is medium (options: dynamic, off, low, medium, high)
+  thinking-level: ${GEMINI_THINKING_LEVEL:medium}
   # API Key resolution priority:
   # 1. Environment variable GEMINI_API_KEY or GOOGLE_API_KEY
   # 2. Local file: api.key in working directory

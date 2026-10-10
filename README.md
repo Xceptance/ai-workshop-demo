@@ -1,6 +1,6 @@
 # AI Mini-Agent Workshop: Glass-Box Agent Platform
 
-An educational, open-source Java & Spring Boot 4.1 mini-agent platform powered by **LangChain4j 1.0**, **Google Gemini (gemini-3.7-flash)**, **HTMX**, and **Bootstrap 5**.
+An educational, open-source Java & Spring Boot 4.1 mini-agent platform powered by **LangChain4j 1.0**, **Google Gemini (gemini-3.8-flash)**, **HTMX**, and **Bootstrap 5**.
 
 Designed specifically to **demystify how AI agents work under the hood** by exposing every micro-step of the ReAct reasoning cycle, parameter negotiation, local method reflection, observation injection, token consumption, and disk auditing.
 
@@ -23,7 +23,7 @@ flowchart TD
     
     subgraph Glass-Box Execution Loop
         Engine -->|1. Context & Tool Schemas| Req[Raw Model Request Payload]
-        Req -->|2. HTTP POST| Gemini[Google Gemini API / gemini-3.7-flash]
+        Req -->|2. HTTP POST| Gemini[Google Gemini API / gemini-3.8-flash]
         Gemini -->|3. Tool Execution Request| Reason[Agent Decision & JSON Args]
         Reason -->|4. Method Dispatch| Tools[Java Tools: Calc, Files, System, Web]
         Tools -->|5. Observation / Result| Memory[Chat Memory & Message List]
@@ -77,7 +77,7 @@ Open your browser to: **[http://localhost:8080](http://localhost:8080)**
 | **Real-Time Streaming (SSE)** | Steps and wire events are broadcast live from the Java engine to the browser via Server-Sent Events (`/api/stream/{sessionId}`). |
 | **Full Disk Audit Logging** | Every conversation turn is saved to `./logs/sessions/{sessionId}/` with `summary.json`, `trace_events.jsonl`, `raw_payloads.json`, `mcp_traffic.jsonl`, and human-readable `transcript.md`. |
 | **Extensible Tool Suites** | Classic Java `@Tool` suite + Dual MCP Servers (Local System/Math/Files server + Live Open-Meteo Weather server with zero API keys required). |
-| **Model Configurable** | Defaults to `gemini-3.7-flash` (also supports `gemini-3.8-flash`, `gemini-3.1-flash-lite`, `gemini-2.5-pro`, and offline mock). |
+| **Model Configurable** | Defaults to `gemini-3.8-flash` with `medium` thinking budget (also supports `gemini-3.7-flash`, `gemini-3.5-flash-lite`, `gemini-3.1-flash-lite`, `gemini-2.5-pro`, and offline mock). |
 
 ---
 

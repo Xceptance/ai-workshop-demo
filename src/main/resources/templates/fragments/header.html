@@ -44,10 +44,10 @@
                     data-bs-toggle="modal" data-bs-target="#modelSettingsModal"
                     title="Click to switch model or adjust thinking level">
                 <i class="fa-solid fa-brain text-primary"></i>
-                <span class="font-mono text-dark fw-medium small" th:text="${modelName}">gemini-3.7-flash</span>
+                <span class="font-mono text-dark fw-medium small" th:text="${modelName}">gemini-3.8-flash</span>
                 <span class="badge bg-primary-subtle text-primary border border-primary-subtle font-mono text-uppercase px-1 py-0 small"
                       style="font-size: 0.7rem;"
-                      th:text="${thinkingLevel != null ? thinkingLevel : 'dynamic'}">dynamic</span>
+                      th:text="${thinkingLevel != null ? thinkingLevel : 'medium'}">medium</span>
                 <i class="fa-solid fa-sliders text-secondary ms-1 small"></i>
             </button>
 

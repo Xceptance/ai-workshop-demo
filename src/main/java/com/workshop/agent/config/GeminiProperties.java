@@ -5,7 +5,8 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 @ConfigurationProperties(prefix = "gemini")
 public class GeminiProperties {
 
-    private String modelName = "gemini-3.7-flash";
+    private String modelName = "gemini-3.8-flash";
+    private String thinkingLevel = "medium";
     private String apiKey = "";
     private Double temperature = 0.2;
     private Integer maxRetries = 3;
@@ -17,6 +18,14 @@ public class GeminiProperties {
 
     public void setModelName(String modelName) {
         this.modelName = modelName;
+    }
+
+    public String getThinkingLevel() {
+        return thinkingLevel;
+    }
+
+    public void setThinkingLevel(String thinkingLevel) {
+        this.thinkingLevel = thinkingLevel;
     }
 
     public String getApiKey() {

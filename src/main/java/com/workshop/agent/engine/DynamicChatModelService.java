@@ -27,8 +27,8 @@ public class DynamicChatModelService {
 
     private final Map<String, ChatModel> modelCache = new ConcurrentHashMap<>();
     private final List<String> availableModels = new CopyOnWriteArrayList<>(List.of(
-            "gemini-3.7-flash",
             "gemini-3.8-flash",
+            "gemini-3.7-flash",
             "gemini-3.5-flash",
             "gemini-3.5-flash-lite",
             "gemini-3.1-flash-lite",
@@ -55,7 +55,7 @@ public class DynamicChatModelService {
                 : geminiProperties.getModelName();
 
         if (effectiveName == null || effectiveName.isBlank()) {
-            effectiveName = "gemini-3.7-flash";
+            effectiveName = "gemini-3.8-flash";
         }
 
         registerModel(effectiveName);

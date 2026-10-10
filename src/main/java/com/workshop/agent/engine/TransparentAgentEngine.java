@@ -87,13 +87,20 @@ public class TransparentAgentEngine {
     }
 
     public AgentSession getOrCreateSession(String sessionId) {
-        return sessions.computeIfAbsent(sessionId, id -> new AgentSession(
-                id,
-                "Workshop Session " + id.substring(0, Math.min(6, id.length())),
-                "gemini-3.7-flash",
-                agentProperties.getSystemPrompt(),
-                0.2
-        ));
+        String defaultModel = (dynamicChatModelService != null && !dynamicChatModelService.getAvailableModels().isEmpty())
+                ? dynamicChatModelService.getAvailableModels().get(0)
+                : "gemini-3.8-flash";
+        return sessions.computeIfAbsent(sessionId, id -> {
+            AgentSession session = new AgentSession(
+                    id,
+                    "Workshop Session " + id.substring(0, Math.min(6, id.length())),
+                    defaultModel,
+                    agentProperties.getSystemPrompt(),
+                    0.2
+            );
+            session.setThinkingLevel("medium");
+            return session;
+        });
     }
 
     public Collection<AgentSession> getAllSessions() {

@@ -23,7 +23,7 @@
                     <div class="mb-3">
                         <label for="activeModelInput" class="form-label fw-bold text-dark d-flex align-items-center justify-content-between">
                             <span><i class="fa-solid fa-brain text-primary me-2"></i>Active Model String</span>
-                            <span class="badge bg-light text-secondary border font-mono small" th:text="'Active: ' + ${modelName}">gemini-3.7-flash</span>
+                            <span class="badge bg-light text-secondary border font-mono small" th:text="'Active: ' + ${modelName}">gemini-3.8-flash</span>
                         </label>
                         <div class="input-group input-group-lg shadow-sm">
                             <span class="input-group-text bg-light text-secondary font-mono small">
@@ -59,9 +59,9 @@
                                     th:classappend="${m == modelName} ? 'btn-primary text-white shadow-sm' : 'btn-outline-secondary bg-white text-dark'"
                                     class="btn btn-sm rounded-pill font-mono px-3 py-1 model-pill-btn d-flex align-items-center gap-1"
                                     onclick="selectModelString(this.getAttribute('data-model'))">
-                                <span th:text="${m}">gemini-3.7-flash</span>
-                                <span th:if="${m == 'gemini-3.7-flash'}" class="badge bg-white text-primary border ms-1 small" style="font-size: 0.65rem;">Default</span>
-                                <span th:if="${m == 'gemini-3.8-flash'}" class="badge bg-success text-white ms-1 small" style="font-size: 0.65rem;">Latest</span>
+                                <span th:text="${m}">gemini-3.8-flash</span>
+                                <span th:if="${m == 'gemini-3.8-flash'}" class="badge bg-white text-primary border ms-1 small" style="font-size: 0.65rem;">Default</span>
+                                <span th:if="${m == 'gemini-3.7-flash'}" class="badge bg-secondary-subtle text-secondary border ms-1 small" style="font-size: 0.65rem;">v3.7</span>
                                 <span th:if="${m == 'gemini-3.5-flash-lite' || m == 'gemini-3.1-flash-lite'}" class="badge bg-info-subtle text-info border ms-1 small" style="font-size: 0.65rem;">Lite</span>
                                 <span th:if="${m == 'gemini-2.5-pro'}" class="badge badge-purple ms-1 small" style="font-size: 0.65rem;">Pro</span>
                             </button>
@@ -72,7 +72,7 @@
                     <div class="mb-4">
                         <label class="form-label fw-bold text-dark d-flex align-items-center justify-content-between">
                             <span><i class="fa-solid fa-lightbulb text-warning me-2"></i>Thinking Level &amp; Reasoning Depth</span>
-                            <span class="badge bg-primary-subtle text-primary border border-primary-subtle font-mono text-uppercase" th:text="${thinkingLevel != null ? thinkingLevel : 'dynamic'}">dynamic</span>
+                            <span class="badge bg-primary-subtle text-primary border border-primary-subtle font-mono text-uppercase" th:text="${thinkingLevel != null ? thinkingLevel : 'medium'}">medium</span>
                         </label>
                         <p class="small text-secondary mb-3">
                             Configures how deeply the model deliberates before taking actions and answering. Hybrid models (Gemini 3.7 / 3.8 / Flash Thinking) adjust internal reasoning tokens accordingly.
@@ -81,7 +81,7 @@
                         <div class="row g-2">
                             <div class="col-sm-6 col-md-4">
                                 <div class="form-check p-3 border rounded-3 h-100 bg-light-subtle">
-                                    <input class="form-check-input" type="radio" name="thinkingLevel" id="thinkDynamic" value="dynamic" th:checked="${thinkingLevel == null or thinkingLevel == 'dynamic'}">
+                                    <input class="form-check-input" type="radio" name="thinkingLevel" id="thinkDynamic" value="dynamic" th:checked="${thinkingLevel == 'dynamic'}">
                                     <label class="form-check-label fw-semibold text-dark d-block" for="thinkDynamic">
                                         ⚡ Dynamic
                                         <small class="text-secondary d-block fw-normal mt-1">Automatic model default reasoning budget.</small>
@@ -108,7 +108,7 @@
                             </div>
                             <div class="col-sm-6 col-md-4">
                                 <div class="form-check p-3 border rounded-3 h-100 bg-light-subtle">
-                                    <input class="form-check-input" type="radio" name="thinkingLevel" id="thinkMedium" value="medium" th:checked="${thinkingLevel == 'medium'}">
+                                    <input class="form-check-input" type="radio" name="thinkingLevel" id="thinkMedium" value="medium" th:checked="${thinkingLevel == null or thinkingLevel == 'medium'}">
                                     <label class="form-check-label fw-semibold text-dark d-block" for="thinkMedium">
                                         🟡 Medium
                                         <small class="text-secondary d-block fw-normal mt-1">~4,096 token budget; balanced step-by-step reasoning.</small>

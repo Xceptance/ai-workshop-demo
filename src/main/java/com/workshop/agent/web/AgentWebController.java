@@ -253,7 +253,7 @@ public class AgentWebController {
         model.addAttribute("mcpTools", mcpClientManager.getDiscoveredToolSpecifications());
         model.addAttribute("mcpTraffic", mcpClientManager.getSessionTraffic(session.getId()));
         model.addAttribute("modelName", session.getModelName() != null ? session.getModelName() : geminiProperties.getModelName());
-        model.addAttribute("thinkingLevel", session.getThinkingLevel() != null ? session.getThinkingLevel() : "dynamic");
+        model.addAttribute("thinkingLevel", session.getThinkingLevel() != null ? session.getThinkingLevel() : "medium");
         model.addAttribute("availableModels", dynamicChatModelService.getAvailableModels());
         model.addAttribute("apiKeyInfo", resolvedKey);
         model.addAttribute("recentSessions", sessionDiskLogger.listRecentSessionSummaries());
