@@ -405,3 +405,39 @@ code, pre, .font-mono {
 .payload-code-view:not(.wrap-lines) {
   white-space: pre !important;
 }
+
+/* Token Meter Pills - High Visibility & Legibility */
+.token-meter-pill {
+  font-size: 0.95rem !important;
+  font-weight: 500;
+  padding: 0.45rem 0.85rem !important;
+  border-radius: 50rem !important;
+  background-color: #ffffff !important;
+  border: 1px solid #cbd5e1 !important;
+  color: #1e293b !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05) !important;
+  display: inline-flex !important;
+  align-items: center;
+  line-height: 1.4;
+  white-space: nowrap;
+  letter-spacing: 0.01em;
+}
+
+.token-meter-pill:hover {
+  border-color: #94a3b8 !important;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.08) !important;
+}
+
+.token-meter-pill .pill-label {
+  color: #64748b;
+  font-size: 0.88rem;
+  font-weight: 600;
+  margin-right: 0.35rem;
+}
+
+.token-meter-pill .pill-value {
+  font-family: 'JetBrains Mono', 'Fira Code', Consolas, monospace;
+  font-size: 0.98rem;
+  font-weight: 700;
+}
+

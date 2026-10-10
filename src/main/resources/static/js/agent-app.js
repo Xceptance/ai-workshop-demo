@@ -238,7 +238,16 @@ function refreshSessionStats() {
         .then(res => res.text())
         .then(html => {
             const meter = document.getElementById('tokenMeterWrapper');
-            if (meter) meter.innerHTML = html;
+            if (meter) {
+                const temp = document.createElement('div');
+                temp.innerHTML = html.trim();
+                const newMeter = temp.querySelector('#tokenMeterWrapper') || temp.firstElementChild;
+                if (newMeter) {
+                    meter.replaceWith(newMeter);
+                } else {
+                    meter.innerHTML = html;
+                }
+            }
         })
         .catch(err => console.debug('Could not refresh token meter:', err));
 }
