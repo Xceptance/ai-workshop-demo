@@ -1,0 +1,21 @@
+server:
+  port: 8085
+
+spring:
+  application:
+    name: energy-market-server
+  ai:
+    mcp:
+      server:
+        enabled: true
+        name: energy-market-server
+        version: 1.0.0
+        stdio: false
+        protocol: STREAMABLE
+        streamable-http:
+          mcp-endpoint: /mcp/stream
+
+logging:
+  level:
+    com.workshop.energy: DEBUG
+    org.springframework.ai.mcp: INFO

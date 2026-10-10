@@ -69,6 +69,8 @@ public class McpClientManager {
 
     // Remote WWO Endpoint
     private final String remoteWwoUrl = "https://mcp.worldweatheronline.com/mcp";
+    // Standalone Subproject Energy Market Server Endpoint
+    private final String energyServerUrl = "http://localhost:8085/mcp";
 
     public McpClientManager(
             LocalMcpServer localMcpServer,
@@ -99,6 +101,9 @@ public class McpClientManager {
 
         // 2. Discover from Open-Meteo Weather MCP Server
         discoverOpenMeteoServer(sessionId);
+
+        // 3. Discover from Standalone Energy Market MCP Server (if running)
+        discoverEnergyMarketServer(sessionId);
 
         log.info("[McpClientManager] Total discovered MCP tools: {} across servers: {}",
                 discoveredSpecifications.size(), toolToServerMap.values().stream().distinct().toList());
@@ -175,6 +180,27 @@ public class McpClientManager {
                 "Remote Railway host returns 404. Live fallback routes to Open-Meteo."
         ));
 
+        // 4. Standalone Energy Market Server (Spring AI 2 Subproject)
+        long energyToolCount = toolToServerMap.values().stream().filter(s -> s.equals("energy-market-server")).count();
+        List<String> energyTools = toolToServerMap.entrySet().stream()
+                .filter(e -> e.getValue().equals("energy-market-server"))
+                .map(Map.Entry::getKey)
+                .toList();
+        list.add(new McpServerConfig(
+                "energy-market-server",
+                "Energy Market Server (Spring AI 2 / JDK 25)",
+                "Spot electricity prices, historical data, renewable forecast & battery arbitrage",
+                "STREAMABLE_HTTP (Port 8085)",
+                energyServerUrl,
+                energyToolCount > 0 ? "CONNECTED" : "STANDALONE_READY",
+                (int) energyToolCount,
+                energyTools,
+                energyToolCount > 0 ? 15L : 0L,
+                energyToolCount > 0
+                        ? "Active on port 8085 (no auth)"
+                        : "Standalone subproject in servers/energy-market-server (start with: mvn spring-boot:run)"
+        ));
+
         return list;
     }
 
@@ -233,6 +259,47 @@ public class McpClientManager {
         recordWireTraffic(sessionId, serverId, "STREAMABLE_HTTP", "INBOUND_RESPONSE", "tools/list", listId, toJson(listResp), durList, true, null);
 
         registerDiscoveredTools(serverId, listResp);
+    }
+
+    private void discoverEnergyMarketServer(String sessionId) {
+        String serverId = "energy-market-server";
+        try {
+            long reqId = messageIdSequence.getAndIncrement();
+            McpProtocolMessage initReq = McpProtocolMessage.initializeRequest(reqId, "ai-mini-agent", "1.0.0");
+            long startInit = System.currentTimeMillis();
+            McpProtocolMessage initResp = sendHttpJsonRpc(energyServerUrl, initReq);
+            long durInit = System.currentTimeMillis() - startInit;
+
+            recordWireTraffic(sessionId, serverId, "STREAMABLE_HTTP", "OUTBOUND_REQUEST", "initialize", reqId, toJson(initReq), 0, true, null);
+            recordWireTraffic(sessionId, serverId, "STREAMABLE_HTTP", "INBOUND_RESPONSE", "initialize", reqId, toJson(initResp), durInit, true, null);
+
+            long listId = messageIdSequence.getAndIncrement();
+            McpProtocolMessage listReq = McpProtocolMessage.toolsListRequest(listId);
+            long startList = System.currentTimeMillis();
+            McpProtocolMessage listResp = sendHttpJsonRpc(energyServerUrl, listReq);
+            long durList = System.currentTimeMillis() - startList;
+
+            recordWireTraffic(sessionId, serverId, "STREAMABLE_HTTP", "OUTBOUND_REQUEST", "tools/list", listId, toJson(listReq), 0, true, null);
+            recordWireTraffic(sessionId, serverId, "STREAMABLE_HTTP", "INBOUND_RESPONSE", "tools/list", listId, toJson(listResp), durList, true, null);
+
+            registerDiscoveredTools(serverId, listResp);
+            log.info("[McpClientManager] Successfully connected to Energy Market MCP Server at {}", energyServerUrl);
+        } catch (Exception e) {
+            log.debug("[McpClientManager] Energy Market MCP server at {} not reachable: {}", energyServerUrl, e.getMessage());
+        }
+    }
+
+    private McpProtocolMessage sendHttpJsonRpc(String url, McpProtocolMessage message) throws Exception {
+        String reqBody = toJson(message);
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(url))
+                .header("Content-Type", "application/json")
+                .timeout(Duration.ofSeconds(2))
+                .POST(HttpRequest.BodyPublishers.ofString(reqBody))
+                .build();
+
+        HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+        return objectMapper.readValue(response.body(), McpProtocolMessage.class);
     }
 
     @SuppressWarnings("unchecked")
@@ -344,6 +411,8 @@ public class McpClientManager {
         try {
             if ("open-meteo-weather".equals(targetServer)) {
                 rpcResponse = openMeteoWeatherServer.handleRequest(rpcRequest);
+            } else if ("energy-market-server".equals(targetServer)) {
+                rpcResponse = sendHttpJsonRpc(energyServerUrl, rpcRequest);
             } else {
                 rpcResponse = localMcpServer.handleRequest(rpcRequest);
             }
