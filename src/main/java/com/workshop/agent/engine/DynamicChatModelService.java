@@ -3,6 +3,7 @@ package com.workshop.agent.engine;
 import com.workshop.agent.config.ApiKeyResolver;
 import com.workshop.agent.config.GeminiProperties;
 import dev.langchain4j.model.chat.ChatModel;
+import dev.langchain4j.model.googleai.GeminiThinkingConfig;
 import dev.langchain4j.model.googleai.GoogleAiGeminiChatModel;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -47,16 +48,25 @@ public class DynamicChatModelService {
     }
 
     /**
-     * Retrieves or instantiates a ChatModel for the requested model string.
+     * Retrieves or instantiates a ChatModel for the requested model string with default thinking level.
      */
     public ChatModel getModel(String modelName) {
-        String effectiveName = (modelName != null && !modelName.isBlank())
-                ? modelName.trim()
-                : geminiProperties.getModelName();
+        return getModel(modelName, "medium");
+    }
 
-        if (effectiveName == null || effectiveName.isBlank()) {
-            effectiveName = "gemini-3.8-flash";
-        }
+    /**
+     * Retrieves or instantiates a ChatModel for the requested model string and thinking level.
+     */
+    public ChatModel getModel(String modelName, String thinkingLevel) {
+        final String effectiveName = (modelName != null && !modelName.isBlank())
+                ? modelName.trim()
+                : (geminiProperties.getModelName() != null && !geminiProperties.getModelName().isBlank()
+                    ? geminiProperties.getModelName().trim()
+                    : "gemini-3.8-flash");
+
+        String effectiveThinking = (thinkingLevel != null && !thinkingLevel.isBlank())
+                ? thinkingLevel.trim().toLowerCase()
+                : "medium";
 
         registerModel(effectiveName);
 
@@ -64,21 +74,41 @@ public class DynamicChatModelService {
             return modelCache.computeIfAbsent("mock", k -> new MockLanguageModel());
         }
 
-        return modelCache.computeIfAbsent(effectiveName, name -> {
-            log.info("Instantiating dynamic GoogleAiGeminiChatModel for model: {}", name);
+        String cacheKey = effectiveName + ":" + effectiveThinking;
+
+        return modelCache.computeIfAbsent(cacheKey, key -> {
+            log.info("Instantiating dynamic GoogleAiGeminiChatModel for model: {} (thinking: {})", effectiveName, effectiveThinking);
             try {
-                return GoogleAiGeminiChatModel.builder()
+                var builder = GoogleAiGeminiChatModel.builder()
                         .apiKey(resolvedKey.key())
-                        .modelName(name)
+                        .modelName(effectiveName)
                         .temperature(geminiProperties.getTemperature())
                         .maxRetries(geminiProperties.getMaxRetries())
                         .timeout(Duration.ofSeconds(geminiProperties.getTimeoutSeconds()))
                         .logRequestsAndResponses(true)
                         .returnThinking(true)
-                        .sendThinking(true)
-                        .build();
+                        .sendThinking(true);
+
+                if ("off".equalsIgnoreCase(effectiveThinking) || "none".equalsIgnoreCase(effectiveThinking)) {
+                    builder.thinkingConfig(GeminiThinkingConfig.builder()
+                            .includeThoughts(false)
+                            .thinkingBudget(0)
+                            .build());
+                } else if ("high".equalsIgnoreCase(effectiveThinking)) {
+                    builder.thinkingConfig(GeminiThinkingConfig.builder()
+                            .includeThoughts(true)
+                            .thinkingBudget(16384)
+                            .build());
+                } else {
+                    // medium, low, dynamic: enable includeThoughts(true) for rich reasoning trace
+                    builder.thinkingConfig(GeminiThinkingConfig.builder()
+                            .includeThoughts(true)
+                            .build());
+                }
+
+                return builder.build();
             } catch (Exception e) {
-                log.error("Failed to instantiate Gemini model '{}': {}. Falling back to mock.", name, e.getMessage(), e);
+                log.error("Failed to instantiate Gemini model '{}': {}. Falling back to mock.", effectiveName, e.getMessage(), e);
                 return new MockLanguageModel();
             }
         });

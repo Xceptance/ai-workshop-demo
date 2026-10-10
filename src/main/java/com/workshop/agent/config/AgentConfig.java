@@ -2,6 +2,7 @@ package com.workshop.agent.config;
 
 import com.workshop.agent.engine.MockLanguageModel;
 import dev.langchain4j.model.chat.ChatModel;
+import dev.langchain4j.model.googleai.GeminiThinkingConfig;
 import dev.langchain4j.model.googleai.GoogleAiGeminiChatModel;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -63,6 +64,7 @@ public class AgentConfig {
                     .logRequestsAndResponses(true)
                     .returnThinking(true)
                     .sendThinking(true)
+                    .thinkingConfig(GeminiThinkingConfig.builder().includeThoughts(true).build())
                     .build();
         } catch (Exception e) {
             log.error("Failed to initialize GoogleAiGeminiChatModel: {}. Falling back to Mock model.", e.getMessage(), e);

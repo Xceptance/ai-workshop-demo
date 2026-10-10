@@ -232,7 +232,7 @@ public class TransparentAgentEngine {
             }
 
             ChatModel activeModel = (dynamicChatModelService != null)
-                    ? dynamicChatModelService.getModel(session.getModelName())
+                    ? dynamicChatModelService.getModel(session.getModelName(), session.getThinkingLevel())
                     : this.chatModel;
 
             dev.langchain4j.model.chat.response.ChatResponse response;

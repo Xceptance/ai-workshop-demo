@@ -218,7 +218,7 @@ public class McpAgentEngine {
                     .build();
 
             ChatModel activeModel = (dynamicChatModelService != null)
-                    ? dynamicChatModelService.getModel(session.getModelName())
+                    ? dynamicChatModelService.getModel(session.getModelName(), session.getThinkingLevel())
                     : this.chatModel;
 
             ChatResponse response;
