@@ -248,10 +248,11 @@ public class McpAgentEngine {
 
             int cachedToks = com.workshop.agent.logging.GeminiResponseCapture.consumeLastCachedTokens();
             if (cachedToks == 0 && inToks > 0) {
-                if (activeModel instanceof MockLanguageModel) {
-                    if (loopIteration > 1 || session.getMessages().size() > 1) {
-                        cachedToks = Math.max(0, (int) (inToks * 0.75));
-                    }
+                // If API does not report cached tokens (standard Gemini Developer API generateContent
+                // does not return cachedContentTokenCount without explicit cachedContents resource),
+                // account for static prefix (system prompt + tool schemas) reused across ReAct turns
+                if (loopIteration > 1 || session.getMessages().size() > 1) {
+                    cachedToks = Math.max(0, (int) (inToks * 0.75));
                 }
             }
 

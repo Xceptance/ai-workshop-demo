@@ -139,7 +139,7 @@
                             </span>
                         </div>
                         <p class="small text-secondary mb-0">
-                            Tool schemas and system prompts sit at the front of every request token stream. Subsequent reasoning turns in this session reuse pre-computed KV-cache states, saving up to ~75% on prompt token costs and drastically lowering latency.
+                            Tool schemas and system prompts sit at the front of every request token stream. On subsequent ReAct turns (e.g. tool loop iterations or follow-up turns), the identical static prompt prefix is reused, saving up to ~75% on prompt token costs and drastically lowering latency.
                         </p>
                     </div>
 

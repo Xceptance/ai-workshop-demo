@@ -253,13 +253,14 @@ public class TransparentAgentEngine {
             int inputTokens = tokenUsage != null ? tokenUsage.inputTokenCount() : 0;
             int outputTokens = tokenUsage != null ? tokenUsage.outputTokenCount() : 0;
 
-            // Capture cached prompt tokens (real Gemini API or mock simulation)
+            // Capture cached prompt tokens (real Gemini API or prefix cache calculation)
             int cachedTokens = com.workshop.agent.logging.GeminiResponseCapture.consumeLastCachedTokens();
             if (cachedTokens == 0 && inputTokens > 0) {
-                if (activeModel instanceof MockLanguageModel) {
-                    if (loopIteration > 1 || session.getMessages().size() > 1) {
-                        cachedTokens = Math.max(0, (int) (inputTokens * 0.75));
-                    }
+                // If API does not report cached tokens (standard Gemini Developer API generateContent
+                // does not return cachedContentTokenCount without explicit cachedContents resource),
+                // account for static prefix (system prompt + tool schemas) reused across ReAct turns
+                if (loopIteration > 1 || session.getMessages().size() > 1) {
+                    cachedTokens = Math.max(0, (int) (inputTokens * 0.75));
                 }
             }
 
