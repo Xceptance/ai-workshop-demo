@@ -19,38 +19,52 @@
             <form th:action="@{'/session/' + ${sessionId} + '/settings'}" method="post">
                 <div class="modal-body p-4">
                     
-                    <!-- 1. Model Selection -->
-                    <div class="mb-4">
-                        <label class="form-label fw-bold text-dark d-flex align-items-center justify-content-between">
-                            <span><i class="fa-solid fa-brain text-primary me-2"></i>Select Language Model</span>
+                    <!-- 1. Direct Model String Input (Editable) -->
+                    <div class="mb-3">
+                        <label for="activeModelInput" class="form-label fw-bold text-dark d-flex align-items-center justify-content-between">
+                            <span><i class="fa-solid fa-brain text-primary me-2"></i>Active Model String</span>
                             <span class="badge bg-light text-secondary border font-mono small" th:text="'Active: ' + ${modelName}">gemini-3.7-flash</span>
                         </label>
-                        
-                        <select name="modelName" id="modelSelectDropdown" class="form-select font-mono mb-2" onchange="toggleCustomModelInput(this.value)">
-                            <option th:each="m : ${availableModels}"
-                                    th:value="${m}"
-                                    th:text="${m}"
-                                    th:selected="${m == modelName}">
-                                gemini-3.7-flash
-                            </option>
-                            <option value="__custom__">➕ Add Another Custom Model String...</option>
-                        </select>
+                        <div class="input-group input-group-lg shadow-sm">
+                            <span class="input-group-text bg-light text-secondary font-mono small">
+                                <i class="fa-solid fa-cube text-primary me-1"></i> Model
+                            </span>
+                            <input type="text"
+                                   name="modelName"
+                                   id="activeModelInput"
+                                   class="form-control font-mono fw-bold fs-6"
+                                   th:value="${modelName}"
+                                   placeholder="e.g. gemini-3.8-flash, gemini-3.7-flash, or any custom model string"
+                                   autocomplete="off"
+                                   required>
+                        </div>
+                        <small class="text-secondary mt-1 d-block">
+                            <i class="fa-solid fa-pen text-primary me-1"></i>
+                            <strong>Directly editable:</strong> Type or paste any Google Gemini or custom model string, or click a quick-pick model below.
+                        </small>
+                    </div>
 
-                        <!-- Custom Model Input (shown if __custom__ selected or toggled) -->
-                        <div id="customModelInputWrapper" class="mt-2" style="display: none;">
-                            <div class="input-group">
-                                <span class="input-group-text bg-light font-mono small text-secondary">Custom Model:</span>
-                                <input type="text"
-                                       name="customModelName"
-                                       id="customModelInput"
-                                       class="form-control font-mono"
-                                       placeholder="e.g. gemini-2.0-flash-thinking-exp-01-21 or gemini-3.8-flash"
-                                       autocomplete="off">
-                            </div>
-                            <small class="text-secondary mt-1 d-block">
-                                <i class="fa-solid fa-circle-info text-primary me-1"></i>
-                                Type any valid Google Gemini or Vertex model string. It will be added to the runtime catalog immediately.
-                            </small>
+                    <!-- Quick Pick Available Google Models -->
+                    <div class="mb-4 p-3 bg-light rounded-3 border border-light-subtle">
+                        <div class="d-flex align-items-center justify-content-between mb-2">
+                            <span class="small fw-bold text-dark">
+                                <i class="fa-solid fa-bolt text-warning me-1"></i> Latest Active Google Gemini Models
+                            </span>
+                            <span class="small text-secondary">Click to fill &amp; switch</span>
+                        </div>
+                        <div class="d-flex flex-wrap gap-2" id="modelPillsContainer">
+                            <button type="button"
+                                    th:each="m : ${availableModels}"
+                                    th:data-model="${m}"
+                                    th:classappend="${m == modelName} ? 'btn-primary text-white shadow-sm' : 'btn-outline-secondary bg-white text-dark'"
+                                    class="btn btn-sm rounded-pill font-mono px-3 py-1 model-pill-btn d-flex align-items-center gap-1"
+                                    onclick="selectModelString(this.getAttribute('data-model'))">
+                                <span th:text="${m}">gemini-3.7-flash</span>
+                                <span th:if="${m == 'gemini-3.7-flash'}" class="badge bg-white text-primary border ms-1 small" style="font-size: 0.65rem;">Default</span>
+                                <span th:if="${m == 'gemini-3.8-flash'}" class="badge bg-success text-white ms-1 small" style="font-size: 0.65rem;">Latest</span>
+                                <span th:if="${m == 'gemini-3.1-flash-lite'}" class="badge bg-info-subtle text-info border ms-1 small" style="font-size: 0.65rem;">Lite</span>
+                                <span th:if="${m == 'gemini-2.5-pro'}" class="badge badge-purple ms-1 small" style="font-size: 0.65rem;">Pro</span>
+                            </button>
                         </div>
                     </div>
 
@@ -61,7 +75,7 @@
                             <span class="badge bg-primary-subtle text-primary border border-primary-subtle font-mono text-uppercase" th:text="${thinkingLevel != null ? thinkingLevel : 'dynamic'}">dynamic</span>
                         </label>
                         <p class="small text-secondary mb-3">
-                            Configures how deeply the model deliberates before taking actions and answering. Hybrid models (Gemini 3.7 / 2.0 Flash Thinking) adjust internal reasoning tokens accordingly.
+                            Configures how deeply the model deliberates before taking actions and answering. Hybrid models (Gemini 3.7 / 3.8 / Flash Thinking) adjust internal reasoning tokens accordingly.
                         </p>
 
                         <div class="row g-2">
@@ -140,25 +154,26 @@
             </form>
         </div>
     </div>
-</div>
-
-<script>
-function toggleCustomModelInput(value) {
-    const wrapper = document.getElementById('customModelInputWrapper');
-    const input = document.getElementById('customModelInput');
-    if (value === '__custom__') {
-        if (wrapper) wrapper.style.display = 'block';
+    
+    <script>
+    function selectModelString(modelName) {
+        var input = document.getElementById('activeModelInput');
         if (input) {
+            input.value = modelName;
             input.focus();
-            input.required = true;
+            input.dispatchEvent(new Event('input', { bubbles: true }));
         }
-    } else {
-        if (wrapper) wrapper.style.display = 'none';
-        if (input) {
-            input.required = false;
-            input.value = '';
-        }
+        var pills = document.querySelectorAll('.model-pill-btn');
+        pills.forEach(function(btn) {
+            if (btn.getAttribute('data-model') === modelName) {
+                btn.classList.remove('btn-outline-secondary', 'bg-white', 'text-dark');
+                btn.classList.add('btn-primary', 'text-white', 'shadow-sm');
+            } else {
+                btn.classList.remove('btn-primary', 'text-white', 'shadow-sm');
+                btn.classList.add('btn-outline-secondary', 'bg-white', 'text-dark');
+            }
+        });
     }
-}
-</script>
+    </script>
+</div>
 </html>

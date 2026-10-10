@@ -698,3 +698,39 @@ function renderAllMath() {
         });
     }
 }
+
+/**
+ * Model Settings Modal - Model Selection & Quick-Pick Chips
+ */
+window.selectModelString = function(modelName) {
+    const input = document.getElementById('activeModelInput');
+    if (input) {
+        input.value = modelName;
+        input.focus();
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+    document.querySelectorAll('.model-pill-btn').forEach(btn => {
+        if (btn.getAttribute('data-model') === modelName) {
+            btn.classList.remove('btn-outline-secondary', 'bg-white', 'text-dark');
+            btn.classList.add('btn-primary', 'text-white', 'shadow-sm');
+        } else {
+            btn.classList.remove('btn-primary', 'text-white', 'shadow-sm');
+            btn.classList.add('btn-outline-secondary', 'bg-white', 'text-dark');
+        }
+    });
+};
+
+document.addEventListener('input', function(e) {
+    if (e.target && e.target.id === 'activeModelInput') {
+        const val = e.target.value.trim();
+        document.querySelectorAll('.model-pill-btn').forEach(btn => {
+            if (btn.getAttribute('data-model') === val) {
+                btn.classList.remove('btn-outline-secondary', 'bg-white', 'text-dark');
+                btn.classList.add('btn-primary', 'text-white', 'shadow-sm');
+            } else {
+                btn.classList.remove('btn-primary', 'text-white', 'shadow-sm');
+                btn.classList.add('btn-outline-secondary', 'bg-white', 'text-dark');
+            }
+        });
+    }
+});

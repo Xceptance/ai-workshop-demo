@@ -187,9 +187,14 @@ public class AgentWebController {
             Model model
     ) {
         AgentSession session = agentEngine.getOrCreateSession(sessionId);
-        String selectedModel = (customModelName != null && !customModelName.isBlank())
-                ? customModelName.trim()
-                : (modelName != null && !modelName.isBlank() ? modelName.trim() : session.getModelName());
+        String selectedModel = null;
+        if (modelName != null && !modelName.isBlank() && !modelName.equalsIgnoreCase("__custom__")) {
+            selectedModel = modelName.trim();
+        } else if (customModelName != null && !customModelName.isBlank() && !customModelName.equalsIgnoreCase("__custom__")) {
+            selectedModel = customModelName.trim();
+        } else {
+            selectedModel = session.getModelName();
+        }
 
         if (selectedModel != null && !selectedModel.isBlank()) {
             dynamicChatModelService.registerModel(selectedModel);

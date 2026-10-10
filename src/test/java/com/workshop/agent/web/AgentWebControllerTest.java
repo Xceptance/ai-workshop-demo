@@ -56,8 +56,7 @@ class AgentWebControllerTest {
     @Test
     void testUpdateSessionSettingsForm() throws Exception {
         mockMvc.perform(post("/session/settings-session/settings")
-                        .param("modelName", "__custom__")
-                        .param("customModelName", "gemini-2.0-flash-thinking-exp-01-21")
+                        .param("modelName", "gemini-3.8-flash")
                         .param("thinkingLevel", "high"))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/?sessionId=settings-session&mode=classic"));

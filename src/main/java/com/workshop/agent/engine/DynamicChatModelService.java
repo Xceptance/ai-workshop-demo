@@ -28,12 +28,11 @@ public class DynamicChatModelService {
     private final Map<String, ChatModel> modelCache = new ConcurrentHashMap<>();
     private final List<String> availableModels = new CopyOnWriteArrayList<>(List.of(
             "gemini-3.7-flash",
-            "gemini-2.5-flash",
+            "gemini-3.8-flash",
+            "gemini-3.5-flash",
+            "gemini-3.1-flash-lite",
             "gemini-2.5-pro",
-            "gemini-2.0-flash",
-            "gemini-2.0-flash-thinking-exp-01-21",
-            "gemini-1.5-flash",
-            "gemini-1.5-pro"
+            "gemini-2.5-flash"
     ));
 
     public DynamicChatModelService(GeminiProperties geminiProperties, ApiKeyResolver.ResolvedKey resolvedKey) {
@@ -94,7 +93,7 @@ public class DynamicChatModelService {
         }
         String cleanName = modelName.trim();
         if (!availableModels.contains(cleanName)) {
-            availableModels.add(cleanName);
+            availableModels.add(0, cleanName);
             log.info("Registered new custom model for runtime selection: {}", cleanName);
         }
         return cleanName;

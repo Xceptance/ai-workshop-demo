@@ -62,7 +62,7 @@ Notice how prompt tokens increase on every turn:
 
 $$\text{Prompt Tokens}_{\text{Turn } n} = \text{System Prompt} + \sum_{i=1}^{n-1}(\text{Messages}_i + \text{Tool Results}_i) + \text{Tool Schemas}$$
 
-In multi-step agents, 90% of token consumption is typically **input tokens** from feeding back tool observations. Using lightweight, fast models like `gemini-3.7-flash` or `gemini-1.5-flash` keeps latency under 1 second and cost per query under a fraction of a cent.
+In multi-step agents, 90% of token consumption is typically **input tokens** from feeding back tool observations. Using lightweight, fast models like `gemini-3.7-flash` or `gemini-3.1-flash-lite` keeps latency under 1 second and cost per query under a fraction of a cent.
 
 ---
 
