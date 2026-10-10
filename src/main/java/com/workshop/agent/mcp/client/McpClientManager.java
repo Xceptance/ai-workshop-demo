@@ -70,7 +70,8 @@ public class McpClientManager {
     // Remote WWO Endpoint
     private final String remoteWwoUrl = "https://mcp.worldweatheronline.com/mcp";
     // Standalone Subproject Energy Market Server Endpoint
-    private final String energyServerUrl = "http://localhost:8085/mcp";
+    private final String energyServerUrl = "http://localhost:8086/mcp";
+    private volatile String energySessionId = null;
 
     public McpClientManager(
             LocalMcpServer localMcpServer,
@@ -88,22 +89,31 @@ public class McpClientManager {
         refreshAllServers("system-init");
     }
 
-    /**
-     * Discovers tools from all active MCP servers and translates them into LangChain4j specifications.
-     */
     public synchronized void refreshAllServers(String sessionId) {
+        refreshAllServers(sessionId, Collections.emptySet());
+    }
+
+    public synchronized void refreshAllServers(String sessionId, Set<String> disabledServers) {
         toolToServerMap.clear();
         discoveredSpecifications.clear();
         toolRawDefinitions.clear();
 
+        Set<String> disabled = (disabledServers != null) ? disabledServers : Collections.emptySet();
+
         // 1. Discover from Local MCP Server
-        discoverLocalServer(sessionId);
+        if (!disabled.contains("local-mcp-server")) {
+            discoverLocalServer(sessionId);
+        }
 
         // 2. Discover from Open-Meteo Weather MCP Server
-        discoverOpenMeteoServer(sessionId);
+        if (!disabled.contains("open-meteo-weather")) {
+            discoverOpenMeteoServer(sessionId);
+        }
 
         // 3. Discover from Standalone Energy Market MCP Server (if running)
-        discoverEnergyMarketServer(sessionId);
+        if (!disabled.contains("energy-market-server")) {
+            discoverEnergyMarketServer(sessionId);
+        }
 
         log.info("[McpClientManager] Total discovered MCP tools: {} across servers: {}",
                 discoveredSpecifications.size(), toolToServerMap.values().stream().distinct().toList());
@@ -126,9 +136,15 @@ public class McpClientManager {
     }
 
     public List<McpServerConfig> getServerConfigs() {
+        return getServerConfigs(Collections.emptySet());
+    }
+
+    public List<McpServerConfig> getServerConfigs(Set<String> disabledServers) {
+        Set<String> disabled = (disabledServers != null) ? disabledServers : Collections.emptySet();
         List<McpServerConfig> list = new ArrayList<>();
 
         // 1. Local Server
+        boolean localEnabled = !disabled.contains("local-mcp-server");
         long localToolCount = toolToServerMap.values().stream().filter(s -> s.equals("local-mcp-server")).count();
         List<String> localTools = toolToServerMap.entrySet().stream()
                 .filter(e -> e.getValue().equals("local-mcp-server"))
@@ -140,14 +156,16 @@ public class McpClientManager {
                 "In-JVM Java MCP Server exposing Math, System, Files, and Search tools",
                 "LOOPBACK / STDIO",
                 "com.workshop.agent.mcp.server.LocalMcpServer",
-                "CONNECTED",
+                localEnabled ? "CONNECTED" : "DISABLED",
                 (int) localToolCount,
                 localTools,
                 2L,
-                "Ready for local function execution"
+                localEnabled ? "Ready for local function execution" : "Server disabled by session setting",
+                localEnabled
         ));
 
         // 2. Open-Meteo Weather Server
+        boolean meteoEnabled = !disabled.contains("open-meteo-weather");
         long meteoToolCount = toolToServerMap.values().stream().filter(s -> s.equals("open-meteo-weather")).count();
         List<String> meteoTools = toolToServerMap.entrySet().stream()
                 .filter(e -> e.getValue().equals("open-meteo-weather"))
@@ -159,28 +177,32 @@ public class McpClientManager {
                 "Global real-time conditions & forecasts with NO API key needed",
                 "STREAMABLE_HTTP (REST Bridge)",
                 "https://api.open-meteo.com",
-                "CONNECTED",
+                meteoEnabled ? "CONNECTED" : "DISABLED",
                 (int) meteoToolCount,
                 meteoTools,
                 120L,
-                "100% Free Open Weather MCP Service active"
+                meteoEnabled ? "100% Free Open Weather MCP Service active" : "Server disabled by session setting",
+                meteoEnabled
         ));
 
         // 3. Remote World Weather Online (Cloud Demo)
+        boolean wwoEnabled = !disabled.contains("world-weather-online");
         list.add(new McpServerConfig(
                 "world-weather-online",
                 "World Weather Online (Cloud Remote)",
                 "External commercial MCP endpoint on Railway",
                 "STREAMABLE_HTTP (POST)",
                 remoteWwoUrl,
-                "DIAGNOSTIC (404 Offline)",
+                wwoEnabled ? "DIAGNOSTIC (404 Offline)" : "DISABLED",
                 0,
                 List.of(),
                 0L,
-                "Remote Railway host returns 404. Live fallback routes to Open-Meteo."
+                wwoEnabled ? "Remote Railway host returns 404. Live fallback routes to Open-Meteo." : "Server disabled by session setting",
+                wwoEnabled
         ));
 
         // 4. Standalone Energy Market Server (Spring AI 2 Subproject)
+        boolean energyEnabled = !disabled.contains("energy-market-server");
         long energyToolCount = toolToServerMap.values().stream().filter(s -> s.equals("energy-market-server")).count();
         List<String> energyTools = toolToServerMap.entrySet().stream()
                 .filter(e -> e.getValue().equals("energy-market-server"))
@@ -190,15 +212,16 @@ public class McpClientManager {
                 "energy-market-server",
                 "Energy Market Server (Spring AI 2 / JDK 25)",
                 "Spot electricity prices, historical data, renewable forecast & battery arbitrage",
-                "STREAMABLE_HTTP (Port 8085)",
+                "STREAMABLE_HTTP (Port 8086)",
                 energyServerUrl,
-                energyToolCount > 0 ? "CONNECTED" : "STANDALONE_READY",
+                !energyEnabled ? "DISABLED" : (energyToolCount > 0 ? "CONNECTED" : "STANDALONE_READY"),
                 (int) energyToolCount,
                 energyTools,
                 energyToolCount > 0 ? 15L : 0L,
-                energyToolCount > 0
-                        ? "Active on port 8085 (no auth)"
-                        : "Standalone subproject in servers/energy-market-server (start with: mvn spring-boot:run)"
+                !energyEnabled ? "Server disabled by session setting" : (energyToolCount > 0
+                        ? "Active on port 8086 (no auth)"
+                        : "Standalone subproject in servers/energy-market-server-bmad (start with: mvn spring-boot:run)"),
+                energyEnabled
         ));
 
         return list;
@@ -291,14 +314,30 @@ public class McpClientManager {
 
     private McpProtocolMessage sendHttpJsonRpc(String url, McpProtocolMessage message) throws Exception {
         String reqBody = toJson(message);
-        HttpRequest request = HttpRequest.newBuilder()
+        var reqBuilder = HttpRequest.newBuilder()
                 .uri(URI.create(url))
                 .header("Content-Type", "application/json")
+                .header("Accept", "text/event-stream, application/json")
                 .timeout(Duration.ofSeconds(2))
-                .POST(HttpRequest.BodyPublishers.ofString(reqBody))
-                .build();
+                .POST(HttpRequest.BodyPublishers.ofString(reqBody));
 
+        if (energySessionId != null) {
+            reqBuilder.header("Mcp-Session-Id", energySessionId);
+        }
+
+        HttpRequest request = reqBuilder.build();
         HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+
+        if (response.statusCode() >= 400) {
+            this.energySessionId = null;
+            throw new RuntimeException("HTTP " + response.statusCode() + ": " + response.body());
+        }
+
+        String newSessionId = response.headers().firstValue("Mcp-Session-Id").orElse(null);
+        if (newSessionId != null) {
+            this.energySessionId = newSessionId;
+        }
+
         return objectMapper.readValue(response.body(), McpProtocolMessage.class);
     }
 
@@ -381,13 +420,26 @@ public class McpClientManager {
         };
     }
 
-    /**
-     * Executes a tool call over the Model Context Protocol.
-     * Records the raw JSON-RPC request and response payloads with exact wire latency.
-     */
     public McpToolExecutionResult executeToolCall(String sessionId, String toolName, String argumentsJson) {
+        return executeToolCall(sessionId, toolName, argumentsJson, null);
+    }
+
+    public McpToolExecutionResult executeToolCall(String sessionId, String toolName, String argumentsJson, com.workshop.agent.model.AgentSession session) {
         String targetServer = toolToServerMap.getOrDefault(toolName, "local-mcp-server");
-        String transport = targetServer.equals("open-meteo-weather") ? "STREAMABLE_HTTP" : "LOOPBACK";
+        String transport = (targetServer.equals("open-meteo-weather") || targetServer.equals("energy-market-server")) ? "STREAMABLE_HTTP" : "LOOPBACK";
+
+        if (session != null) {
+            if (!session.isMcpToolEnabled(toolName)) {
+                String error = "MCP tool '" + toolName + "' is currently disabled for this session.";
+                log.warn("[MCP-EXEC-BLOCKED] {}", error);
+                return new McpToolExecutionResult(toolName, targetServer, transport, argumentsJson, "{}", "ERROR: " + error, 0, false, error);
+            }
+            if (!session.isMcpServerEnabled(targetServer)) {
+                String error = "MCP server '" + targetServer + "' is currently disabled for this session.";
+                log.warn("[MCP-EXEC-BLOCKED] {}", error);
+                return new McpToolExecutionResult(toolName, targetServer, transport, argumentsJson, "{}", "ERROR: " + error, 0, false, error);
+            }
+        }
 
         long reqId = messageIdSequence.getAndIncrement();
         Object parsedArgs;
