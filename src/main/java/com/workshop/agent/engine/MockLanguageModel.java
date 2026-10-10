@@ -6,10 +6,9 @@ import dev.langchain4j.data.message.AiMessage;
 import dev.langchain4j.data.message.ChatMessage;
 import dev.langchain4j.data.message.ToolExecutionResultMessage;
 import dev.langchain4j.data.message.UserMessage;
-import dev.langchain4j.model.chat.ChatLanguageModel;
+import dev.langchain4j.model.chat.ChatModel;
 import dev.langchain4j.model.chat.request.ChatRequest;
 import dev.langchain4j.model.chat.response.ChatResponse;
-import dev.langchain4j.model.output.Response;
 import dev.langchain4j.model.output.TokenUsage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -19,9 +18,9 @@ import java.util.UUID;
 
 /**
  * Educational Mock LLM for offline workshop testing and demonstration when no Gemini API key is configured.
- * Simulates tool-calling decisions and final answer synthesis. Compatible with LangChain4j 1.0.
+ * Simulates tool-calling decisions and final answer synthesis. Compatible with LangChain4j 1.22.0.
  */
-public class MockLanguageModel implements ChatLanguageModel {
+public class MockLanguageModel implements ChatModel {
 
     private static final Logger log = LoggerFactory.getLogger(MockLanguageModel.class);
 
@@ -154,22 +153,5 @@ public class MockLanguageModel implements ChatLanguageModel {
                 .aiMessage(AiMessage.from(reply))
                 .tokenUsage(new TokenUsage(50, 40, 90))
                 .build();
-    }
-
-    @Override
-    public Response<AiMessage> generate(List<ChatMessage> messages) {
-        ChatResponse resp = chat(ChatRequest.builder().messages(messages).build());
-        return Response.from(resp.aiMessage(), resp.tokenUsage());
-    }
-
-    @Override
-    public Response<AiMessage> generate(List<ChatMessage> messages, List<ToolSpecification> toolSpecifications) {
-        ChatResponse resp = chat(ChatRequest.builder()
-                .messages(messages)
-                .parameters(dev.langchain4j.model.chat.request.ChatRequestParameters.builder()
-                        .toolSpecifications(toolSpecifications)
-                        .build())
-                .build());
-        return Response.from(resp.aiMessage(), resp.tokenUsage());
     }
 }

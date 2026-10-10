@@ -12,7 +12,7 @@ import com.workshop.agent.util.MarkdownRenderer;
 import dev.langchain4j.agent.tool.ToolExecutionRequest;
 import dev.langchain4j.agent.tool.ToolSpecification;
 import dev.langchain4j.data.message.*;
-import dev.langchain4j.model.chat.ChatLanguageModel;
+import dev.langchain4j.model.chat.ChatModel;
 import dev.langchain4j.model.chat.request.ChatRequest;
 import dev.langchain4j.model.chat.request.ChatRequestParameters;
 import dev.langchain4j.model.chat.response.ChatResponse;
@@ -44,7 +44,7 @@ public class McpAgentEngine {
 
     private static final Logger log = LoggerFactory.getLogger(McpAgentEngine.class);
 
-    private final ChatLanguageModel chatLanguageModel;
+    private final ChatModel chatModel;
     private final DynamicChatModelService dynamicChatModelService;
     private final McpClientManager mcpClientManager;
     private final TransparentAgentEngine agentEngine;
@@ -54,7 +54,7 @@ public class McpAgentEngine {
     private final ObjectMapper objectMapper;
 
     public McpAgentEngine(
-            ChatLanguageModel chatLanguageModel,
+            ChatModel chatModel,
             McpClientManager mcpClientManager,
             TransparentAgentEngine agentEngine,
             AgentProperties agentProperties,
@@ -62,12 +62,12 @@ public class McpAgentEngine {
             MarkdownRenderer markdownRenderer,
             ObjectMapper objectMapper
     ) {
-        this(chatLanguageModel, null, mcpClientManager, agentEngine, agentProperties, sessionDiskLogger, markdownRenderer, objectMapper);
+        this(chatModel, null, mcpClientManager, agentEngine, agentProperties, sessionDiskLogger, markdownRenderer, objectMapper);
     }
 
     @org.springframework.beans.factory.annotation.Autowired
     public McpAgentEngine(
-            ChatLanguageModel chatLanguageModel,
+            ChatModel chatModel,
             @org.springframework.beans.factory.annotation.Autowired(required = false) DynamicChatModelService dynamicChatModelService,
             McpClientManager mcpClientManager,
             TransparentAgentEngine agentEngine,
@@ -76,7 +76,7 @@ public class McpAgentEngine {
             MarkdownRenderer markdownRenderer,
             ObjectMapper objectMapper
     ) {
-        this.chatLanguageModel = chatLanguageModel;
+        this.chatModel = chatModel;
         this.dynamicChatModelService = dynamicChatModelService;
         this.mcpClientManager = mcpClientManager;
         this.agentEngine = agentEngine;
@@ -217,9 +217,9 @@ public class McpAgentEngine {
                             .build())
                     .build();
 
-            ChatLanguageModel activeModel = (dynamicChatModelService != null)
+            ChatModel activeModel = (dynamicChatModelService != null)
                     ? dynamicChatModelService.getModel(session.getModelName())
-                    : this.chatLanguageModel;
+                    : this.chatModel;
 
             ChatResponse response;
             try {

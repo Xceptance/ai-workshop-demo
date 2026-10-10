@@ -2,7 +2,7 @@ package com.workshop.agent.engine;
 
 import com.workshop.agent.config.ApiKeyResolver;
 import com.workshop.agent.config.GeminiProperties;
-import dev.langchain4j.model.chat.ChatLanguageModel;
+import dev.langchain4j.model.chat.ChatModel;
 import dev.langchain4j.model.googleai.GoogleAiGeminiChatModel;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -25,7 +25,7 @@ public class DynamicChatModelService {
     private final GeminiProperties geminiProperties;
     private final ApiKeyResolver.ResolvedKey resolvedKey;
 
-    private final Map<String, ChatLanguageModel> modelCache = new ConcurrentHashMap<>();
+    private final Map<String, ChatModel> modelCache = new ConcurrentHashMap<>();
     private final List<String> availableModels = new CopyOnWriteArrayList<>(List.of(
             "gemini-3.7-flash",
             "gemini-2.5-flash",
@@ -48,9 +48,9 @@ public class DynamicChatModelService {
     }
 
     /**
-     * Retrieves or instantiates a ChatLanguageModel for the requested model string.
+     * Retrieves or instantiates a ChatModel for the requested model string.
      */
-    public ChatLanguageModel getModel(String modelName) {
+    public ChatModel getModel(String modelName) {
         String effectiveName = (modelName != null && !modelName.isBlank())
                 ? modelName.trim()
                 : geminiProperties.getModelName();
@@ -75,6 +75,8 @@ public class DynamicChatModelService {
                         .maxRetries(geminiProperties.getMaxRetries())
                         .timeout(Duration.ofSeconds(geminiProperties.getTimeoutSeconds()))
                         .logRequestsAndResponses(true)
+                        .returnThinking(true)
+                        .sendThinking(true)
                         .build();
             } catch (Exception e) {
                 log.error("Failed to instantiate Gemini model '{}': {}. Falling back to mock.", name, e.getMessage(), e);

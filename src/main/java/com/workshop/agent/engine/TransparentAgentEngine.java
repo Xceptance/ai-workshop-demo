@@ -11,8 +11,7 @@ import com.workshop.agent.util.MarkdownRenderer;
 import dev.langchain4j.agent.tool.ToolExecutionRequest;
 import dev.langchain4j.agent.tool.ToolSpecification;
 import dev.langchain4j.data.message.*;
-import dev.langchain4j.model.chat.ChatLanguageModel;
-import dev.langchain4j.model.output.Response;
+import dev.langchain4j.model.chat.ChatModel;
 import dev.langchain4j.model.output.TokenUsage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -40,7 +39,7 @@ public class TransparentAgentEngine {
 
     private static final Logger log = LoggerFactory.getLogger(TransparentAgentEngine.class);
 
-    private final ChatLanguageModel chatLanguageModel;
+    private final ChatModel chatModel;
     private final DynamicChatModelService dynamicChatModelService;
     private final ToolRegistry toolRegistry;
     private final AgentProperties agentProperties;
@@ -55,7 +54,7 @@ public class TransparentAgentEngine {
     private final Map<String, Set<Consumer<AgentStepEvent>>> sessionListeners = new ConcurrentHashMap<>();
 
     public TransparentAgentEngine(
-            ChatLanguageModel chatLanguageModel,
+            ChatModel chatModel,
             ToolRegistry toolRegistry,
             AgentProperties agentProperties,
             SessionDiskLogger sessionDiskLogger,
@@ -63,12 +62,12 @@ public class TransparentAgentEngine {
             MarkdownRenderer markdownRenderer,
             ObjectMapper objectMapper
     ) {
-        this(chatLanguageModel, null, toolRegistry, agentProperties, sessionDiskLogger, consoleAnsiLogger, markdownRenderer, objectMapper);
+        this(chatModel, null, toolRegistry, agentProperties, sessionDiskLogger, consoleAnsiLogger, markdownRenderer, objectMapper);
     }
 
     @org.springframework.beans.factory.annotation.Autowired
     public TransparentAgentEngine(
-            ChatLanguageModel chatLanguageModel,
+            ChatModel chatModel,
             @org.springframework.beans.factory.annotation.Autowired(required = false) DynamicChatModelService dynamicChatModelService,
             ToolRegistry toolRegistry,
             AgentProperties agentProperties,
@@ -77,7 +76,7 @@ public class TransparentAgentEngine {
             MarkdownRenderer markdownRenderer,
             ObjectMapper objectMapper
     ) {
-        this.chatLanguageModel = chatLanguageModel;
+        this.chatModel = chatModel;
         this.dynamicChatModelService = dynamicChatModelService;
         this.toolRegistry = toolRegistry;
         this.agentProperties = agentProperties;
@@ -225,9 +224,9 @@ public class TransparentAgentEngine {
                         .build();
             }
 
-            ChatLanguageModel activeModel = (dynamicChatModelService != null)
+            ChatModel activeModel = (dynamicChatModelService != null)
                     ? dynamicChatModelService.getModel(session.getModelName())
-                    : this.chatLanguageModel;
+                    : this.chatModel;
 
             dev.langchain4j.model.chat.response.ChatResponse response;
             try {

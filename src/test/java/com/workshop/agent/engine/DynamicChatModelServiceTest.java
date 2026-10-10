@@ -2,7 +2,7 @@ package com.workshop.agent.engine;
 
 import com.workshop.agent.config.ApiKeyResolver;
 import com.workshop.agent.config.GeminiProperties;
-import dev.langchain4j.model.chat.ChatLanguageModel;
+import dev.langchain4j.model.chat.ChatModel;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -42,11 +42,11 @@ class DynamicChatModelServiceTest {
 
     @Test
     void testGetModelForArbitraryString() {
-        ChatLanguageModel model1 = service.getModel("gemini-custom-future-9.0");
+        ChatModel model1 = service.getModel("gemini-custom-future-9.0");
         assertNotNull(model1);
         assertTrue(service.getAvailableModels().contains("gemini-custom-future-9.0"));
 
-        ChatLanguageModel model2 = service.getModel("gemini-custom-future-9.0");
+        ChatModel model2 = service.getModel("gemini-custom-future-9.0");
         assertSame(model1, model2, "Model instance should be cached and reused across requests");
     }
 }
