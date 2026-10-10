@@ -507,6 +507,9 @@ public class McpAgentEngine {
             map.put("text", um.singleText());
         } else if (msg instanceof AiMessage am) {
             map.put("text", am.text());
+            if (am.thinking() != null && !am.thinking().isBlank()) {
+                map.put("thinking", am.thinking());
+            }
             if (am.hasToolExecutionRequests()) {
                 map.put("toolExecutionRequests", am.toolExecutionRequests().stream().map(r -> Map.of(
                         "id", r.id() != null ? r.id() : "",

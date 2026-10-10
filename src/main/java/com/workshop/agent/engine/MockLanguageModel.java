@@ -38,7 +38,10 @@ public class MockLanguageModel implements ChatModel {
                     toolResult.text()
             );
             return ChatResponse.builder()
-                    .aiMessage(AiMessage.from(finalAnswer))
+                    .aiMessage(AiMessage.builder()
+                            .text(finalAnswer)
+                            .thinking("Observed tool execution result for '" + toolResult.toolName() + "': " + toolResult.text() + ".\nSynthesizing final concise answer for the user.")
+                            .build())
                     .tokenUsage(new TokenUsage(85, 45, 130))
                     .build();
         }
@@ -75,7 +78,10 @@ public class MockLanguageModel implements ChatModel {
                         .arguments("{\"location\": \"" + loc + "\"}")
                         .build();
                 return ChatResponse.builder()
-                        .aiMessage(AiMessage.from(List.of(req)))
+                        .aiMessage(AiMessage.builder()
+                                .toolExecutionRequests(List.of(req))
+                                .thinking("User is asking for weather information in " + loc + ". Invoking tool 'get_current_weather' to retrieve accurate atmospheric conditions.")
+                                .build())
                         .tokenUsage(new TokenUsage(110, 30, 140))
                         .build();
             }
@@ -90,7 +96,10 @@ public class MockLanguageModel implements ChatModel {
                     .arguments("{\"expression\": \"42 * 8\", \"operation\": \"MULTIPLY\", \"a\": 42, \"b\": 8}")
                     .build();
             return ChatResponse.builder()
-                    .aiMessage(AiMessage.from(List.of(req)))
+                    .aiMessage(AiMessage.builder()
+                            .toolExecutionRequests(List.of(req))
+                            .thinking("User submitted an arithmetic calculation. Delegating calculation to deterministic 'calculate' tool.")
+                            .build())
                     .tokenUsage(new TokenUsage(120, 30, 150))
                     .build();
         }
@@ -112,7 +121,10 @@ public class MockLanguageModel implements ChatModel {
                     .arguments("{\"timezone\": \"UTC\"}")
                     .build();
             return ChatResponse.builder()
-                    .aiMessage(AiMessage.from(List.of(req)))
+                    .aiMessage(AiMessage.builder()
+                            .toolExecutionRequests(List.of(req))
+                            .thinking("User queried system or temporal metrics. Invoking tool '" + toolName + "' to inspect host state.")
+                            .build())
                     .tokenUsage(new TokenUsage(90, 25, 115))
                     .build();
         }
@@ -126,7 +138,10 @@ public class MockLanguageModel implements ChatModel {
                     .arguments("{\"relativePath\": \".\"}")
                     .build();
             return ChatResponse.builder()
-                    .aiMessage(AiMessage.from(List.of(req)))
+                    .aiMessage(AiMessage.builder()
+                            .toolExecutionRequests(List.of(req))
+                            .thinking("User asked for repository filesystem contents. Invoking '" + toolName + "' to inspect directory structure.")
+                            .build())
                     .tokenUsage(new TokenUsage(110, 35, 145))
                     .build();
         }
@@ -140,7 +155,10 @@ public class MockLanguageModel implements ChatModel {
                     .arguments("{\"query\": \"" + userText.replace("\"", "") + "\"}")
                     .build();
             return ChatResponse.builder()
-                    .aiMessage(AiMessage.from(List.of(req)))
+                    .aiMessage(AiMessage.builder()
+                            .toolExecutionRequests(List.of(req))
+                            .thinking("User initiated an external knowledge query. Calling search tool '" + toolName + "'.")
+                            .build())
                     .tokenUsage(new TokenUsage(100, 30, 130))
                     .build();
         }
@@ -150,7 +168,10 @@ public class MockLanguageModel implements ChatModel {
                 "Try asking me to calculate something (e.g. 'calculate 42 * 8'), check the system time ('what time is it?'), " +
                 "list workspace files ('list directory'), or search ('search weather in Berlin') to see how tool calling works!";
         return ChatResponse.builder()
-                .aiMessage(AiMessage.from(reply))
+                .aiMessage(AiMessage.builder()
+                        .text(reply)
+                        .thinking("Determined user query is a general greeting or prompt. Direct informative answer suffices without tool invocation.")
+                        .build())
                 .tokenUsage(new TokenUsage(50, 40, 90))
                 .build();
     }

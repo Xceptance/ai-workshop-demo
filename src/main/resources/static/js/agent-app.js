@@ -208,7 +208,17 @@ function createStepCardHtml(step) {
     }
 
     let reasoningBoxHtml = '';
-    const thinkingText = (step.metadata && step.metadata.thinking) ? String(step.metadata.thinking) : '';
+    let thinkingText = (step.metadata && step.metadata.thinking) ? String(step.metadata.thinking) : '';
+    if (!thinkingText && step.responsePayload) {
+        try {
+            const parsed = JSON.parse(step.responsePayload);
+            if (parsed && parsed.thinking) {
+                thinkingText = String(parsed.thinking);
+            }
+        } catch (e) {
+            // ignore non-json
+        }
+    }
     if (thinkingText.trim().length > 0) {
         const reasoningSwitch = document.getElementById('toggleReasoningSwitch');
         const isVisible = reasoningSwitch ? reasoningSwitch.checked : true;
