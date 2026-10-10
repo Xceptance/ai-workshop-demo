@@ -441,3 +441,42 @@ code, pre, .font-mono {
   font-weight: 700;
 }
 
+/* Step Card LLM Turn Token Badges (In / Out / Cached) */
+.step-token-badge {
+  font-size: 0.78rem;
+  font-family: 'JetBrains Mono', 'Fira Code', Consolas, monospace;
+  font-weight: 500;
+  padding: 0.22rem 0.55rem;
+  border-radius: 50rem;
+  background-color: #ffffff;
+  display: inline-flex;
+  align-items: center;
+  line-height: 1.25;
+  white-space: nowrap;
+}
+
+.step-token-badge.token-in {
+  color: var(--accent-primary, #2563eb);
+  border: 1px solid rgba(37, 99, 235, 0.25);
+  background: rgba(37, 99, 235, 0.04);
+}
+
+.step-token-badge.token-out {
+  color: #16a34a;
+  border: 1px solid rgba(22, 163, 74, 0.25);
+  background: rgba(22, 163, 74, 0.04);
+}
+
+.step-token-badge.token-cached {
+  color: #0284c7;
+  border: 1px solid rgba(2, 132, 199, 0.25);
+  background: rgba(2, 132, 199, 0.04);
+}
+
+.step-token-badge.token-total {
+  color: #475569;
+  border: 1px solid #cbd5e1;
+  background: #f8fafc;
+}
+
+

@@ -65,8 +65,11 @@ public class MarkdownTranscriptGenerator {
             }
 
             if (event.tokenStats() != null && event.tokenStats().totalTokens() > 0) {
-                sb.append("**Step Stats:** `").append(event.tokenStats().totalTokens()).append(" tokens` | `")
-                        .append(event.tokenStats().formattedDuration()).append("`\n\n");
+                sb.append("**Step Tokens:** In: `").append(event.tokenStats().inputTokens())
+                        .append("` | Out: `").append(event.tokenStats().outputTokens())
+                        .append("` | Cached: `").append(event.tokenStats().cachedTokens())
+                        .append("` | Total: `").append(event.tokenStats().totalTokens())
+                        .append("` (Duration: `").append(event.tokenStats().formattedDuration()).append("`)\n\n");
             }
 
             if (event.requestPayload() != null && !event.requestPayload().isBlank()) {
