@@ -28,7 +28,7 @@ class DynamicChatModelServiceTest {
         List<String> models = service.getAvailableModels();
         assertTrue(models.contains("gemini-3.7-flash"));
         assertTrue(models.contains("gemini-3.8-flash"));
-        assertTrue(models.contains("gemini-2.5-flash"));
+        assertTrue(models.contains("gemini-3.5-flash-lite"));
         assertTrue(models.contains("gemini-2.5-pro"));
     }
 
