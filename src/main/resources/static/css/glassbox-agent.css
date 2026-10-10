@@ -100,6 +100,97 @@ code, pre, .font-mono {
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.03);
 }
 
+.message-body {
+  overflow-x: auto;
+  line-height: 1.6;
+}
+
+/* Modern Markdown Tables Rendering */
+.message-body table,
+.agent-bubble table,
+.transcript-markdown table {
+  width: 100%;
+  margin: 1.25rem 0;
+  border-collapse: separate;
+  border-spacing: 0;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  overflow: hidden;
+  background-color: #ffffff;
+  font-size: 0.88rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.message-body thead,
+.agent-bubble thead,
+.transcript-markdown thead {
+  background-color: #f1f5f9;
+}
+
+.message-body th,
+.agent-bubble th,
+.transcript-markdown th {
+  background-color: #f1f5f9;
+  color: #1e293b;
+  font-weight: 700;
+  font-size: 0.82rem;
+  letter-spacing: 0.02em;
+  padding: 0.65rem 0.9rem;
+  border-bottom: 2px solid #cbd5e1;
+  border-right: 1px solid #e2e8f0;
+  text-align: left;
+}
+
+.message-body td,
+.agent-bubble td,
+.transcript-markdown td {
+  padding: 0.6rem 0.9rem;
+  color: #334155;
+  border-bottom: 1px solid #e2e8f0;
+  border-right: 1px solid #f1f5f9;
+  vertical-align: middle;
+  line-height: 1.5;
+}
+
+.message-body tr:last-child td,
+.agent-bubble tr:last-child td,
+.transcript-markdown tr:last-child td {
+  border-bottom: none;
+}
+
+.message-body th:last-child,
+.message-body td:last-child,
+.agent-bubble th:last-child,
+.agent-bubble td:last-child,
+.transcript-markdown th:last-child,
+.transcript-markdown td:last-child {
+  border-right: none;
+}
+
+.message-body tbody tr:nth-child(even),
+.agent-bubble tbody tr:nth-child(even),
+.transcript-markdown tbody tr:nth-child(even) {
+  background-color: #f8fafc;
+}
+
+.message-body tbody tr:hover,
+.agent-bubble tbody tr:hover,
+.transcript-markdown tbody tr:hover {
+  background-color: #f1f5f9;
+}
+
+.message-body table code,
+.agent-bubble table code,
+.transcript-markdown table code {
+  font-size: 0.84rem;
+  padding: 0.15rem 0.4rem;
+  border-radius: 4px;
+  background-color: #f1f5f9;
+  color: #be185d;
+  border: 1px solid #e2e8f0;
+}
+
+
 /* Timeline & Stepper */
 .timeline-scroll-area {
   flex: 1 1 0;
