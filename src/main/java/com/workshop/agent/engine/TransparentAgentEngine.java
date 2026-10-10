@@ -145,8 +145,8 @@ public class TransparentAgentEngine {
         contextMetadata.put("activeTools", toolSpecs.stream().map(ToolSpecification::name).toList());
 
         Map<String, Object> contextAssemblyPayload = new LinkedHashMap<>();
-        contextAssemblyPayload.put("messages", formatMessagesForAudit(conversationMessages));
         contextAssemblyPayload.put("toolSpecifications", formatToolSpecifications(toolSpecs));
+        contextAssemblyPayload.put("messages", formatMessagesForAudit(conversationMessages));
 
         AgentStepEvent contextEvent = AgentStepEvent.of(
                 sessionId,
@@ -174,10 +174,10 @@ public class TransparentAgentEngine {
             Map<String, Object> modelRequestPayload = new LinkedHashMap<>();
             modelRequestPayload.put("model", session.getModelName());
             modelRequestPayload.put("temperature", session.getTemperature());
-            modelRequestPayload.put("messages", formatMessagesForAudit(conversationMessages));
             if (!toolSpecs.isEmpty()) {
                 modelRequestPayload.put("toolSpecifications", formatToolSpecifications(toolSpecs));
             }
+            modelRequestPayload.put("messages", formatMessagesForAudit(conversationMessages));
 
             // Execute LLM Generation with LangChain4j 1.0 ChatRequest
             dev.langchain4j.model.chat.request.ChatRequest chatRequest;

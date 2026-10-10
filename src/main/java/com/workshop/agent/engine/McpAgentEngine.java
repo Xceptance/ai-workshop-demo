@@ -143,8 +143,8 @@ public class McpAgentEngine {
         conversationMessages.add(UserMessage.from(userPrompt));
 
         Map<String, Object> contextPayload = new LinkedHashMap<>();
-        contextPayload.put("messages", formatMessagesForAudit(conversationMessages));
         contextPayload.put("mcpToolSpecifications", formatToolSpecifications(mcpToolSpecs));
+        contextPayload.put("messages", formatMessagesForAudit(conversationMessages));
 
         AgentStepEvent contextEvent = AgentStepEvent.of(
                 sessionId,
@@ -171,10 +171,10 @@ public class McpAgentEngine {
             Map<String, Object> modelRequestPayload = new LinkedHashMap<>();
             modelRequestPayload.put("model", session.getModelName());
             modelRequestPayload.put("temperature", session.getTemperature());
-            modelRequestPayload.put("messages", formatMessagesForAudit(conversationMessages));
             if (!mcpToolSpecs.isEmpty()) {
                 modelRequestPayload.put("toolSpecifications", formatToolSpecifications(mcpToolSpecs));
             }
+            modelRequestPayload.put("messages", formatMessagesForAudit(conversationMessages));
 
             ChatRequest chatRequest = ChatRequest.builder()
                     .messages(conversationMessages)
