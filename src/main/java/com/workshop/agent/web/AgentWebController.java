@@ -28,6 +28,7 @@ public class AgentWebController {
 
     private final TransparentAgentEngine agentEngine;
     private final com.workshop.agent.engine.McpAgentEngine mcpAgentEngine;
+    private final com.workshop.agent.engine.DynamicChatModelService dynamicChatModelService;
     private final com.workshop.agent.mcp.client.McpClientManager mcpClientManager;
     private final ToolRegistry toolRegistry;
     private final GeminiProperties geminiProperties;
@@ -38,6 +39,7 @@ public class AgentWebController {
     public AgentWebController(
             TransparentAgentEngine agentEngine,
             com.workshop.agent.engine.McpAgentEngine mcpAgentEngine,
+            com.workshop.agent.engine.DynamicChatModelService dynamicChatModelService,
             com.workshop.agent.mcp.client.McpClientManager mcpClientManager,
             ToolRegistry toolRegistry,
             GeminiProperties geminiProperties,
@@ -47,6 +49,7 @@ public class AgentWebController {
     ) {
         this.agentEngine = agentEngine;
         this.mcpAgentEngine = mcpAgentEngine;
+        this.dynamicChatModelService = dynamicChatModelService;
         this.mcpClientManager = mcpClientManager;
         this.toolRegistry = toolRegistry;
         this.geminiProperties = geminiProperties;
@@ -175,6 +178,64 @@ public class AgentWebController {
         return ResponseEntity.ok(mcpClientManager.getSessionTraffic(sessionId));
     }
 
+    @PostMapping("/session/{sessionId}/settings")
+    public String updateSettings(
+            @PathVariable("sessionId") String sessionId,
+            @RequestParam(value = "modelName", required = false) String modelName,
+            @RequestParam(value = "customModelName", required = false) String customModelName,
+            @RequestParam(value = "thinkingLevel", required = false) String thinkingLevel,
+            Model model
+    ) {
+        AgentSession session = agentEngine.getOrCreateSession(sessionId);
+        String selectedModel = (customModelName != null && !customModelName.isBlank())
+                ? customModelName.trim()
+                : (modelName != null && !modelName.isBlank() ? modelName.trim() : session.getModelName());
+
+        if (selectedModel != null && !selectedModel.isBlank()) {
+            dynamicChatModelService.registerModel(selectedModel);
+            session.setModelName(selectedModel);
+        }
+
+        if (thinkingLevel != null && !thinkingLevel.isBlank()) {
+            session.setThinkingLevel(thinkingLevel.trim().toLowerCase());
+        }
+
+        populateModel(model, session);
+        return "redirect:/?sessionId=" + sessionId + "&mode=" + session.getMode();
+    }
+
+    @PostMapping(value = "/api/session/{sessionId}/model")
+    @ResponseBody
+    public ResponseEntity<?> setModelApi(
+            @PathVariable("sessionId") String sessionId,
+            @RequestBody(required = false) java.util.Map<String, String> body,
+            @RequestParam(value = "modelName", required = false) String paramModelName,
+            @RequestParam(value = "thinkingLevel", required = false) String paramThinkingLevel
+    ) {
+        String effectiveModelName = (body != null && body.get("modelName") != null)
+                ? body.get("modelName")
+                : paramModelName;
+        String effectiveThinkingLevel = (body != null && body.get("thinkingLevel") != null)
+                ? body.get("thinkingLevel")
+                : paramThinkingLevel;
+
+        AgentSession session = agentEngine.getOrCreateSession(sessionId);
+        if (effectiveModelName != null && !effectiveModelName.isBlank()) {
+            String cleanName = dynamicChatModelService.registerModel(effectiveModelName);
+            session.setModelName(cleanName);
+        }
+        if (effectiveThinkingLevel != null && !effectiveThinkingLevel.isBlank()) {
+            session.setThinkingLevel(effectiveThinkingLevel.trim().toLowerCase());
+        }
+        return ResponseEntity.ok(java.util.Map.of(
+                "status", "success",
+                "sessionId", sessionId,
+                "modelName", session.getModelName(),
+                "thinkingLevel", session.getThinkingLevel(),
+                "availableModels", dynamicChatModelService.getAvailableModels()
+        ));
+    }
+
     private void populateModel(Model model, AgentSession session) {
         model.addAttribute("agentSession", session);
         model.addAttribute("sessionId", session.getId());
@@ -186,7 +247,9 @@ public class AgentWebController {
         model.addAttribute("mcpServers", mcpClientManager.getServerConfigs());
         model.addAttribute("mcpTools", mcpClientManager.getDiscoveredToolSpecifications());
         model.addAttribute("mcpTraffic", mcpClientManager.getSessionTraffic(session.getId()));
-        model.addAttribute("modelName", geminiProperties.getModelName());
+        model.addAttribute("modelName", session.getModelName() != null ? session.getModelName() : geminiProperties.getModelName());
+        model.addAttribute("thinkingLevel", session.getThinkingLevel() != null ? session.getThinkingLevel() : "dynamic");
+        model.addAttribute("availableModels", dynamicChatModelService.getAvailableModels());
         model.addAttribute("apiKeyInfo", resolvedKey);
         model.addAttribute("recentSessions", sessionDiskLogger.listRecentSessionSummaries());
     }

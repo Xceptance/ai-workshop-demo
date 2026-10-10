@@ -41,6 +41,7 @@ public class TransparentAgentEngine {
     private static final Logger log = LoggerFactory.getLogger(TransparentAgentEngine.class);
 
     private final ChatLanguageModel chatLanguageModel;
+    private final DynamicChatModelService dynamicChatModelService;
     private final ToolRegistry toolRegistry;
     private final AgentProperties agentProperties;
     private final SessionDiskLogger sessionDiskLogger;
@@ -62,7 +63,22 @@ public class TransparentAgentEngine {
             MarkdownRenderer markdownRenderer,
             ObjectMapper objectMapper
     ) {
+        this(chatLanguageModel, null, toolRegistry, agentProperties, sessionDiskLogger, consoleAnsiLogger, markdownRenderer, objectMapper);
+    }
+
+    @org.springframework.beans.factory.annotation.Autowired
+    public TransparentAgentEngine(
+            ChatLanguageModel chatLanguageModel,
+            @org.springframework.beans.factory.annotation.Autowired(required = false) DynamicChatModelService dynamicChatModelService,
+            ToolRegistry toolRegistry,
+            AgentProperties agentProperties,
+            SessionDiskLogger sessionDiskLogger,
+            ConsoleAnsiLogger consoleAnsiLogger,
+            MarkdownRenderer markdownRenderer,
+            ObjectMapper objectMapper
+    ) {
         this.chatLanguageModel = chatLanguageModel;
+        this.dynamicChatModelService = dynamicChatModelService;
         this.toolRegistry = toolRegistry;
         this.agentProperties = agentProperties;
         this.sessionDiskLogger = sessionDiskLogger;
@@ -123,7 +139,19 @@ public class TransparentAgentEngine {
 
         // 2. Assemble Context (System Prompt, History, Active Tools)
         List<ChatMessage> conversationMessages = new ArrayList<>();
-        conversationMessages.add(SystemMessage.from(session.getSystemPrompt()));
+        String effectiveSystemPrompt = session.getSystemPrompt();
+        String thinkingLevel = session.getThinkingLevel();
+        if (thinkingLevel != null && !"dynamic".equalsIgnoreCase(thinkingLevel)) {
+            String thinkingGuidance = switch (thinkingLevel.toLowerCase()) {
+                case "off", "none" -> "\n\nThinking Budget: OFF. Provide concise, direct answers without verbose internal deliberation.";
+                case "low" -> "\n\nThinking Budget: LOW. Keep reasoning brief, step directly to actions or conclusions.";
+                case "medium" -> "\n\nThinking Budget: MEDIUM. Balance clear reasoning and step-by-step verification.";
+                case "high" -> "\n\nThinking Budget: HIGH. Deliberate deeply, verify hypotheses, and double-check all tool arguments and observations before concluding.";
+                default -> "";
+            };
+            effectiveSystemPrompt += thinkingGuidance;
+        }
+        conversationMessages.add(SystemMessage.from(effectiveSystemPrompt));
 
         // Add previous message history
         for (ChatMessageDto prev : session.getMessages()) {
@@ -141,6 +169,8 @@ public class TransparentAgentEngine {
 
         Map<String, Object> contextMetadata = new LinkedHashMap<>();
         contextMetadata.put("systemPromptLength", session.getSystemPrompt().length());
+        contextMetadata.put("model", session.getModelName());
+        contextMetadata.put("thinkingLevel", session.getThinkingLevel());
         contextMetadata.put("historyMessageCount", conversationMessages.size());
         contextMetadata.put("activeTools", toolSpecs.stream().map(ToolSpecification::name).toList());
 
@@ -173,6 +203,7 @@ public class TransparentAgentEngine {
             // Format full request payload sent to Gemini including context & tool schemas
             Map<String, Object> modelRequestPayload = new LinkedHashMap<>();
             modelRequestPayload.put("model", session.getModelName());
+            modelRequestPayload.put("thinkingLevel", session.getThinkingLevel());
             modelRequestPayload.put("temperature", session.getTemperature());
             if (!toolSpecs.isEmpty()) {
                 modelRequestPayload.put("toolSpecifications", formatToolSpecifications(toolSpecs));
@@ -194,9 +225,13 @@ public class TransparentAgentEngine {
                         .build();
             }
 
+            ChatLanguageModel activeModel = (dynamicChatModelService != null)
+                    ? dynamicChatModelService.getModel(session.getModelName())
+                    : this.chatLanguageModel;
+
             dev.langchain4j.model.chat.response.ChatResponse response;
             try {
-                response = chatLanguageModel.chat(chatRequest);
+                response = activeModel.chat(chatRequest);
             } catch (Exception e) {
                 log.error("LLM Generation failed on iteration {}: {}", loopIteration, e.getMessage(), e);
                 AgentStepEvent errorEvent = AgentStepEvent.of(
@@ -218,7 +253,18 @@ public class TransparentAgentEngine {
             TokenUsage tokenUsage = response.tokenUsage();
             int inputTokens = tokenUsage != null ? tokenUsage.inputTokenCount() : 0;
             int outputTokens = tokenUsage != null ? tokenUsage.outputTokenCount() : 0;
-            TokenUsageStats stepStats = TokenUsageStats.of(inputTokens, outputTokens, requestDuration);
+
+            // Capture cached prompt tokens (real Gemini API or mock simulation)
+            int cachedTokens = com.workshop.agent.logging.GeminiResponseCapture.consumeLastCachedTokens();
+            if (cachedTokens == 0 && inputTokens > 0) {
+                if (activeModel instanceof MockLanguageModel) {
+                    if (loopIteration > 1 || session.getMessages().size() > 1) {
+                        cachedTokens = Math.max(0, (int) (inputTokens * 0.75));
+                    }
+                }
+            }
+
+            TokenUsageStats stepStats = TokenUsageStats.of(inputTokens, outputTokens, cachedTokens, requestDuration);
             turnTotalStats = turnTotalStats.add(stepStats);
 
             AiMessage aiMessage = response.aiMessage();
@@ -250,17 +296,30 @@ public class TransparentAgentEngine {
                         "toolRequests", formattedToolRequests
                 ));
 
+                String cachedSummary = stepStats.cachedTokens() > 0
+                        ? " [" + stepStats.cachedTokens() + " cached / " + stepStats.cacheHitPercentage() + "% hit]"
+                        : "";
+                String stepSummary = String.format("Sent context (%d messages, %d tools). Model requested: %s%s",
+                        conversationMessages.size(), toolSpecs.size(), toolRequests.stream().map(ToolExecutionRequest::name).toList(), cachedSummary);
+
                 AgentStepEvent reasoningEvent = AgentStepEvent.of(
                         sessionId,
                         currentStepNumber++,
                         StepType.TOOL_CALL_REQUEST,
                         "LLM Reasoning (Iteration " + loopIteration + "): Decided to Execute " + toolRequests.size() + " Tool(s)",
-                        "Sent context (" + conversationMessages.size() + " messages, " + toolSpecs.size() + " tools). Model requested: " + toolRequests.stream().map(ToolExecutionRequest::name).toList(),
+                        stepSummary,
                         toJson(unifiedPayload),
                         requestJson,
                         responseJson,
                         stepStats,
-                        Map.of("iteration", loopIteration, "toolCount", toolRequests.size(), "text", aiMessage.text() != null ? aiMessage.text() : "")
+                        Map.of(
+                                "iteration", loopIteration,
+                                "model", session.getModelName(),
+                                "thinkingLevel", session.getThinkingLevel(),
+                                "toolCount", toolRequests.size(),
+                                "cachedTokens", stepStats.cachedTokens(),
+                                "text", aiMessage.text() != null ? aiMessage.text() : ""
+                        )
                 );
                 publishStep(session, reasoningEvent);
                 turnStepEvents.add(reasoningEvent);
@@ -337,17 +396,29 @@ public class TransparentAgentEngine {
                         "finalAnswer", finalText
                 ));
 
+                String cachedSummary = stepStats.cachedTokens() > 0
+                        ? " [" + stepStats.cachedTokens() + " cached / " + stepStats.cacheHitPercentage() + "% hit]"
+                        : "";
+                String finalSummary = String.format("Sent context (%d messages, %d tools). Completed reasoning cycle in %d iteration(s).%s",
+                        conversationMessages.size(), toolSpecs.size(), loopIteration, cachedSummary);
+
                 AgentStepEvent finalEvent = AgentStepEvent.of(
                         sessionId,
                         currentStepNumber++,
                         StepType.FINAL_SYNTHESIS,
                         "LLM Reasoning (Iteration " + loopIteration + "): Final Answer Synthesized",
-                        "Sent context (" + conversationMessages.size() + " messages, " + toolSpecs.size() + " tools). Completed reasoning cycle in " + loopIteration + " iteration(s).",
+                        finalSummary,
                         toJson(unifiedPayload),
                         requestJson,
                         responseJson,
                         stepStats,
-                        Map.of("iteration", loopIteration, "finalTextLength", finalText.length())
+                        Map.of(
+                                "iteration", loopIteration,
+                                "model", session.getModelName(),
+                                "thinkingLevel", session.getThinkingLevel(),
+                                "cachedTokens", stepStats.cachedTokens(),
+                                "finalTextLength", finalText.length()
+                        )
                 );
                 publishStep(session, finalEvent);
                 turnStepEvents.add(finalEvent);

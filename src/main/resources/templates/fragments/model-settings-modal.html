@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<div th:fragment="modelModal" class="modal fade" id="modelSettingsModal" tabindex="-1" aria-labelledby="modelSettingsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content shadow-lg border-0">
+            <div class="modal-header bg-white border-bottom border-light-subtle pb-3">
+                <div class="d-flex align-items-center gap-2">
+                    <div class="p-2 rounded-3 bg-primary bg-opacity-10 text-primary">
+                        <i class="fa-solid fa-sliders fs-5"></i>
+                    </div>
+                    <div>
+                        <h5 class="modal-title fw-bold text-dark mb-0" id="modelSettingsModalLabel">Model &amp; Reasoning Settings</h5>
+                        <small class="text-secondary">Switch Gemini models, define thinking budget, and monitor prompt caching at runtime</small>
+                    </div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            
+            <form th:action="@{'/session/' + ${sessionId} + '/settings'}" method="post">
+                <div class="modal-body p-4">
+                    
+                    <!-- 1. Model Selection -->
+                    <div class="mb-4">
+                        <label class="form-label fw-bold text-dark d-flex align-items-center justify-content-between">
+                            <span><i class="fa-solid fa-brain text-primary me-2"></i>Select Language Model</span>
+                            <span class="badge bg-light text-secondary border font-mono small" th:text="'Active: ' + ${modelName}">gemini-3.7-flash</span>
+                        </label>
+                        
+                        <select name="modelName" id="modelSelectDropdown" class="form-select font-mono mb-2" onchange="toggleCustomModelInput(this.value)">
+                            <option th:each="m : ${availableModels}"
+                                    th:value="${m}"
+                                    th:text="${m}"
+                                    th:selected="${m == modelName}">
+                                gemini-3.7-flash
+                            </option>
+                            <option value="__custom__">➕ Add Another Custom Model String...</option>
+                        </select>
+
+                        <!-- Custom Model Input (shown if __custom__ selected or toggled) -->
+                        <div id="customModelInputWrapper" class="mt-2" style="display: none;">
+                            <div class="input-group">
+                                <span class="input-group-text bg-light font-mono small text-secondary">Custom Model:</span>
+                                <input type="text"
+                                       name="customModelName"
+                                       id="customModelInput"
+                                       class="form-control font-mono"
+                                       placeholder="e.g. gemini-2.0-flash-thinking-exp-01-21 or gemini-3.8-flash"
+                                       autocomplete="off">
+                            </div>
+                            <small class="text-secondary mt-1 d-block">
+                                <i class="fa-solid fa-circle-info text-primary me-1"></i>
+                                Type any valid Google Gemini or Vertex model string. It will be added to the runtime catalog immediately.
+                            </small>
+                        </div>
+                    </div>
+
+                    <!-- 2. Thinking Level Budget -->
+                    <div class="mb-4">
+                        <label class="form-label fw-bold text-dark d-flex align-items-center justify-content-between">
+                            <span><i class="fa-solid fa-lightbulb text-warning me-2"></i>Thinking Level &amp; Reasoning Depth</span>
+                            <span class="badge bg-primary-subtle text-primary border border-primary-subtle font-mono text-uppercase" th:text="${thinkingLevel != null ? thinkingLevel : 'dynamic'}">dynamic</span>
+                        </label>
+                        <p class="small text-secondary mb-3">
+                            Configures how deeply the model deliberates before taking actions and answering. Hybrid models (Gemini 3.7 / 2.0 Flash Thinking) adjust internal reasoning tokens accordingly.
+                        </p>
+
+                        <div class="row g-2">
+                            <div class="col-sm-6 col-md-4">
+                                <div class="form-check p-3 border rounded-3 h-100 bg-light-subtle">
+                                    <input class="form-check-input" type="radio" name="thinkingLevel" id="thinkDynamic" value="dynamic" th:checked="${thinkingLevel == null or thinkingLevel == 'dynamic'}">
+                                    <label class="form-check-label fw-semibold text-dark d-block" for="thinkDynamic">
+                                        ⚡ Dynamic
+                                        <small class="text-secondary d-block fw-normal mt-1">Automatic model default reasoning budget.</small>
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="col-sm-6 col-md-4">
+                                <div class="form-check p-3 border rounded-3 h-100 bg-light-subtle">
+                                    <input class="form-check-input" type="radio" name="thinkingLevel" id="thinkOff" value="off" th:checked="${thinkingLevel == 'off' or thinkingLevel == 'none'}">
+                                    <label class="form-check-label fw-semibold text-dark d-block" for="thinkOff">
+                                        🛑 Off / Direct
+                                        <small class="text-secondary d-block fw-normal mt-1">Zero thinking tokens; immediate tool dispatch &amp; replies.</small>
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="col-sm-6 col-md-4">
+                                <div class="form-check p-3 border rounded-3 h-100 bg-light-subtle">
+                                    <input class="form-check-input" type="radio" name="thinkingLevel" id="thinkLow" value="low" th:checked="${thinkingLevel == 'low'}">
+                                    <label class="form-check-label fw-semibold text-dark d-block" for="thinkLow">
+                                        🟢 Low
+                                        <small class="text-secondary d-block fw-normal mt-1">~1,024 token budget; concise step deliberation.</small>
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="col-sm-6 col-md-4">
+                                <div class="form-check p-3 border rounded-3 h-100 bg-light-subtle">
+                                    <input class="form-check-input" type="radio" name="thinkingLevel" id="thinkMedium" value="medium" th:checked="${thinkingLevel == 'medium'}">
+                                    <label class="form-check-label fw-semibold text-dark d-block" for="thinkMedium">
+                                        🟡 Medium
+                                        <small class="text-secondary d-block fw-normal mt-1">~4,096 token budget; balanced step-by-step reasoning.</small>
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="col-sm-6 col-md-4">
+                                <div class="form-check p-3 border rounded-3 h-100 bg-light-subtle">
+                                    <input class="form-check-input" type="radio" name="thinkingLevel" id="thinkHigh" value="high" th:checked="${thinkingLevel == 'high'}">
+                                    <label class="form-check-label fw-semibold text-dark d-block" for="thinkHigh">
+                                        🟣 High
+                                        <small class="text-secondary d-block fw-normal mt-1">~16,384 token budget; exhaustive hypothesis testing &amp; verification.</small>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 3. Prompt Caching Status Card -->
+                    <div class="p-3 bg-light rounded-3 border border-secondary-subtle">
+                        <div class="d-flex align-items-center justify-content-between mb-2">
+                            <span class="fw-bold text-dark small">
+                                <i class="fa-solid fa-bolt text-info me-1"></i> Prompt Prefix Caching Status
+                            </span>
+                            <span class="badge bg-info-subtle text-info border border-info-subtle font-mono small"
+                                  th:text="${tokenStats.cachedTokens()} + ' cached tokens (' + ${tokenStats.cacheHitPercentage()} + '% hit rate)'">
+                                0 cached tokens
+                            </span>
+                        </div>
+                        <p class="small text-secondary mb-0">
+                            Tool schemas and system prompts sit at the front of every request token stream. Subsequent reasoning turns in this session reuse pre-computed KV-cache states, saving up to ~75% on prompt token costs and drastically lowering latency.
+                        </p>
+                    </div>
+
+                </div>
+                
+                <div class="modal-footer bg-white border-top border-light-subtle">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary px-4 fw-semibold">
+                        <i class="fa-solid fa-check me-1"></i> Apply Settings
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+function toggleCustomModelInput(value) {
+    const wrapper = document.getElementById('customModelInputWrapper');
+    const input = document.getElementById('customModelInput');
+    if (value === '__custom__') {
+        if (wrapper) wrapper.style.display = 'block';
+        if (input) {
+            input.focus();
+            input.required = true;
+        }
+    } else {
+        if (wrapper) wrapper.style.display = 'none';
+        if (input) {
+            input.required = false;
+            input.value = '';
+        }
+    }
+}
+</script>
+</html>

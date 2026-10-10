@@ -45,6 +45,7 @@ public class McpAgentEngine {
     private static final Logger log = LoggerFactory.getLogger(McpAgentEngine.class);
 
     private final ChatLanguageModel chatLanguageModel;
+    private final DynamicChatModelService dynamicChatModelService;
     private final McpClientManager mcpClientManager;
     private final TransparentAgentEngine agentEngine;
     private final AgentProperties agentProperties;
@@ -61,7 +62,22 @@ public class McpAgentEngine {
             MarkdownRenderer markdownRenderer,
             ObjectMapper objectMapper
     ) {
+        this(chatLanguageModel, null, mcpClientManager, agentEngine, agentProperties, sessionDiskLogger, markdownRenderer, objectMapper);
+    }
+
+    @org.springframework.beans.factory.annotation.Autowired
+    public McpAgentEngine(
+            ChatLanguageModel chatLanguageModel,
+            @org.springframework.beans.factory.annotation.Autowired(required = false) DynamicChatModelService dynamicChatModelService,
+            McpClientManager mcpClientManager,
+            TransparentAgentEngine agentEngine,
+            AgentProperties agentProperties,
+            SessionDiskLogger sessionDiskLogger,
+            MarkdownRenderer markdownRenderer,
+            ObjectMapper objectMapper
+    ) {
         this.chatLanguageModel = chatLanguageModel;
+        this.dynamicChatModelService = dynamicChatModelService;
         this.mcpClientManager = mcpClientManager;
         this.agentEngine = agentEngine;
         this.agentProperties = agentProperties;
@@ -131,7 +147,19 @@ public class McpAgentEngine {
 
         // 3. Assemble Context
         List<ChatMessage> conversationMessages = new ArrayList<>();
-        conversationMessages.add(SystemMessage.from(session.getSystemPrompt()));
+        String effectiveSystemPrompt = session.getSystemPrompt();
+        String thinkingLevel = session.getThinkingLevel();
+        if (thinkingLevel != null && !"dynamic".equalsIgnoreCase(thinkingLevel)) {
+            String thinkingGuidance = switch (thinkingLevel.toLowerCase()) {
+                case "off", "none" -> "\n\nThinking Budget: OFF. Provide concise, direct answers without verbose internal deliberation.";
+                case "low" -> "\n\nThinking Budget: LOW. Keep reasoning brief, step directly to actions or conclusions.";
+                case "medium" -> "\n\nThinking Budget: MEDIUM. Balance clear reasoning and step-by-step verification.";
+                case "high" -> "\n\nThinking Budget: HIGH. Deliberate deeply, verify hypotheses, and double-check all tool arguments and observations before concluding.";
+                default -> "";
+            };
+            effectiveSystemPrompt += thinkingGuidance;
+        }
+        conversationMessages.add(SystemMessage.from(effectiveSystemPrompt));
 
         for (ChatMessageDto prev : session.getMessages()) {
             if ("user".equalsIgnoreCase(prev.role()) && !prev.id().equals(userMsgId)) {
@@ -154,7 +182,12 @@ public class McpAgentEngine {
                 "Assembled " + conversationMessages.size() + " messages with " + mcpToolSpecs.size() + " MCP tool schemas for Gemini.",
                 toJson(contextPayload),
                 TokenUsageStats.empty(),
-                Map.of("messageCount", conversationMessages.size(), "toolCount", mcpToolSpecs.size())
+                Map.of(
+                        "messageCount", conversationMessages.size(),
+                        "toolCount", mcpToolSpecs.size(),
+                        "model", session.getModelName(),
+                        "thinkingLevel", session.getThinkingLevel()
+                )
         );
         publishStep(session, contextEvent);
 
@@ -170,6 +203,7 @@ public class McpAgentEngine {
 
             Map<String, Object> modelRequestPayload = new LinkedHashMap<>();
             modelRequestPayload.put("model", session.getModelName());
+            modelRequestPayload.put("thinkingLevel", session.getThinkingLevel());
             modelRequestPayload.put("temperature", session.getTemperature());
             if (!mcpToolSpecs.isEmpty()) {
                 modelRequestPayload.put("toolSpecifications", formatToolSpecifications(mcpToolSpecs));
@@ -183,9 +217,13 @@ public class McpAgentEngine {
                             .build())
                     .build();
 
+            ChatLanguageModel activeModel = (dynamicChatModelService != null)
+                    ? dynamicChatModelService.getModel(session.getModelName())
+                    : this.chatLanguageModel;
+
             ChatResponse response;
             try {
-                response = chatLanguageModel.chat(chatRequest);
+                response = activeModel.chat(chatRequest);
             } catch (Exception e) {
                 log.error("[MCP-ENGINE] LLM generation failed on iteration {}: {}", loopIteration, e.getMessage(), e);
                 AgentStepEvent errorEvent = AgentStepEvent.of(
@@ -207,7 +245,17 @@ public class McpAgentEngine {
             TokenUsage tokenUsage = response.tokenUsage();
             int inToks = tokenUsage != null ? tokenUsage.inputTokenCount() : 0;
             int outToks = tokenUsage != null ? tokenUsage.outputTokenCount() : 0;
-            TokenUsageStats stepStats = TokenUsageStats.of(inToks, outToks, requestDuration);
+
+            int cachedToks = com.workshop.agent.logging.GeminiResponseCapture.consumeLastCachedTokens();
+            if (cachedToks == 0 && inToks > 0) {
+                if (activeModel instanceof MockLanguageModel) {
+                    if (loopIteration > 1 || session.getMessages().size() > 1) {
+                        cachedToks = Math.max(0, (int) (inToks * 0.75));
+                    }
+                }
+            }
+
+            TokenUsageStats stepStats = TokenUsageStats.of(inToks, outToks, cachedToks, requestDuration);
             turnTotalStats = turnTotalStats.add(stepStats);
 
             AiMessage aiMessage = response.aiMessage();
@@ -222,17 +270,26 @@ public class McpAgentEngine {
                         "toolRequests", toolRequests.stream().map(this::formatToolExecutionRequest).toList()
                 ));
 
+                String cachedSummary = stepStats.cachedTokens() > 0
+                        ? " [" + stepStats.cachedTokens() + " cached / " + stepStats.cacheHitPercentage() + "% hit]"
+                        : "";
                 AgentStepEvent reasoningEvent = AgentStepEvent.of(
                         sessionId,
                         currentStepNumber++,
                         StepType.TOOL_CALL_REQUEST,
                         "LLM Reasoning (Iteration " + loopIteration + "): Requested " + toolRequests.size() + " MCP Tool(s)",
-                        "Decided to call external MCP tools: " + toolRequests.stream().map(ToolExecutionRequest::name).toList(),
+                        "Decided to call external MCP tools: " + toolRequests.stream().map(ToolExecutionRequest::name).toList() + cachedSummary,
                         responseJson,
                         requestJson,
                         responseJson,
                         stepStats,
-                        Map.of("toolCount", toolRequests.size())
+                        Map.of(
+                                "iteration", loopIteration,
+                                "model", session.getModelName(),
+                                "thinkingLevel", session.getThinkingLevel(),
+                                "toolCount", toolRequests.size(),
+                                "cachedTokens", stepStats.cachedTokens()
+                        )
                 );
                 publishStep(session, reasoningEvent);
                 turnStepEvents.add(reasoningEvent);
@@ -299,17 +356,26 @@ public class McpAgentEngine {
                 String requestJson = toJson(modelRequestPayload);
                 String responseJson = toJson(Map.of("finalAnswer", finalText));
 
+                String cachedSummary = stepStats.cachedTokens() > 0
+                        ? " [" + stepStats.cachedTokens() + " cached / " + stepStats.cacheHitPercentage() + "% hit]"
+                        : "";
                 AgentStepEvent finalEvent = AgentStepEvent.of(
                         sessionId,
                         currentStepNumber++,
                         StepType.FINAL_SYNTHESIS,
                         "LLM Reasoning (Iteration " + loopIteration + "): Final Answer Synthesized",
-                        "Completed MCP reasoning cycle in " + loopIteration + " iteration(s).",
+                        "Completed MCP reasoning cycle in " + loopIteration + " iteration(s)." + cachedSummary,
                         responseJson,
                         requestJson,
                         responseJson,
                         stepStats,
-                        Map.of("iteration", loopIteration, "length", finalText.length())
+                        Map.of(
+                                "iteration", loopIteration,
+                                "model", session.getModelName(),
+                                "thinkingLevel", session.getThinkingLevel(),
+                                "cachedTokens", stepStats.cachedTokens(),
+                                "length", finalText.length()
+                        )
                 );
                 publishStep(session, finalEvent);
                 turnStepEvents.add(finalEvent);

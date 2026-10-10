@@ -13,6 +13,14 @@
         <strong class="text-success font-mono" th:text="${tokenStats.outputTokens()}">0</strong>
     </div>
 
+    <div class="badge bg-white border border-secondary-subtle text-dark p-2 shadow-sm"
+         th:title="'Prompt Cache Reused: ' + ${tokenStats.cachedTokens()} + ' tokens (' + ${tokenStats.cacheHitPercentage()} + '% hit rate)'">
+        <i class="fa-solid fa-bolt text-info me-1"></i>
+        <span class="text-secondary">Cached: </span>
+        <strong class="text-info font-mono" th:text="${tokenStats.cachedTokens()}">0</strong>
+        <span th:if="${tokenStats.cachedTokens() > 0}" class="text-success small fw-semibold ms-1" th:text="'(' + ${tokenStats.cacheHitPercentage()} + '%)'">(0%)</span>
+    </div>
+
     <div class="badge bg-white border border-secondary-subtle text-dark p-2 shadow-sm" title="Total Tokens in session">
         <i class="fa-solid fa-coins text-warning-emphasis me-1"></i>
         <span class="text-secondary">Total: </span>

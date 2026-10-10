@@ -47,10 +47,14 @@ public class ConsoleAnsiLogger {
         }
 
         if (event.tokenStats() != null && event.tokenStats().totalTokens() > 0) {
-            log.info("{}│  Tokens: {} (Input: {}, Output: {}, Cost: {}, Latency: {}){}",
+            String cachedStr = event.tokenStats().cachedTokens() > 0
+                    ? String.format(", Cached: %d [%d%%]", event.tokenStats().cachedTokens(), event.tokenStats().cacheHitPercentage())
+                    : "";
+            log.info("{}│  Tokens: {} (Input: {}{}, Output: {}, Cost: {}, Latency: {}){}",
                     color,
                     event.tokenStats().totalTokens(),
                     event.tokenStats().inputTokens(),
+                    cachedStr,
                     event.tokenStats().outputTokens(),
                     event.tokenStats().formattedCost(),
                     event.tokenStats().formattedDuration(),

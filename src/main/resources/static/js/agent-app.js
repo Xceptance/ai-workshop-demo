@@ -137,7 +137,8 @@ function createStepCardHtml(step) {
 
     let statsBadge = '';
     if (step.tokenStats && step.tokenStats.totalTokens > 0) {
-        statsBadge = `<span class="badge badge-pill-glow ms-auto"><i class="fa-solid fa-bolt me-1"></i>${step.tokenStats.totalTokens} toks</span>`;
+        const cachedNote = step.tokenStats.cachedTokens > 0 ? ` <span class="text-info opacity-75 small">(${step.tokenStats.cachedTokens} cached)</span>` : '';
+        statsBadge = `<span class="badge badge-pill-glow ms-auto"><i class="fa-solid fa-bolt me-1"></i>${step.tokenStats.totalTokens} toks${cachedNote}</span>`;
     }
 
     let payloadBoxesHtml = '';

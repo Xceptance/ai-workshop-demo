@@ -16,7 +16,8 @@ public class AgentSession {
     private final String id;
     private String title;
     private String mode = "classic"; // "classic" or "mcp"
-    private final String modelName;
+    private String modelName;
+    private String thinkingLevel = "dynamic"; // "off", "low", "medium", "high", "dynamic"
     private final String systemPrompt;
     private final double temperature;
 
@@ -108,6 +109,20 @@ public class AgentSession {
 
     public String getModelName() {
         return modelName;
+    }
+
+    public void setModelName(String modelName) {
+        if (modelName != null && !modelName.isBlank()) {
+            this.modelName = modelName.trim();
+        }
+    }
+
+    public String getThinkingLevel() {
+        return thinkingLevel;
+    }
+
+    public void setThinkingLevel(String thinkingLevel) {
+        this.thinkingLevel = thinkingLevel != null ? thinkingLevel.trim().toLowerCase() : "dynamic";
     }
 
     public String getSystemPrompt() {

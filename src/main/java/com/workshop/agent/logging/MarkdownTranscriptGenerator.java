@@ -25,10 +25,12 @@ public class MarkdownTranscriptGenerator {
         sb.append("**Session ID:** `").append(session.getId()).append("`  \n");
         sb.append("**Title:** ").append(session.getTitle()).append("  \n");
         sb.append("**Model:** `").append(session.getModelName()).append("`  \n");
+        sb.append("**Thinking Level:** `").append(session.getThinkingLevel()).append("`  \n");
         sb.append("**Created:** ").append(TIME_FORMATTER.format(session.getCreatedAt())).append("  \n");
 
         TokenUsageStats stats = session.getTotalTokenStats();
         sb.append("**Token Usage:** Input: `").append(stats.inputTokens())
+                .append("` | Cached: `").append(stats.cachedTokens())
                 .append("` | Output: `").append(stats.outputTokens())
                 .append("` | Total: `").append(stats.totalTokens())
                 .append("` | Est. Cost: `").append(stats.formattedCost())

@@ -20,9 +20,11 @@
             <strong class="small text-dark" th:text="${step.title()}">Step Title</strong>
 
             <span th:if="${step.tokenStats() != null and step.tokenStats().totalTokens() > 0}"
-                  class="badge badge-pill-glow ms-auto">
+                  class="badge badge-pill-glow ms-auto"
+                  th:title="${step.tokenStats().cachedTokens() > 0 ? step.tokenStats().cachedTokens() + ' cached prompt tokens reused' : ''}">
                 <i class="fa-solid fa-bolt me-1"></i>
                 <span th:text="${step.tokenStats().totalTokens()} + ' toks'">0 toks</span>
+                <span th:if="${step.tokenStats().cachedTokens() > 0}" class="text-info opacity-75 small ms-1" th:text="'(' + ${step.tokenStats().cachedTokens()} + ' cached)'"></span>
             </span>
         </div>
 

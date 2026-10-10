@@ -90,6 +90,7 @@ public class SessionDiskLogger {
             summary.put("sessionId", session.getId());
             summary.put("title", session.getTitle());
             summary.put("modelName", session.getModelName());
+            summary.put("thinkingLevel", session.getThinkingLevel());
             summary.put("createdAt", session.getCreatedAt());
             summary.put("updatedAt", Instant.now());
             summary.put("messageCount", session.getMessages().size());
