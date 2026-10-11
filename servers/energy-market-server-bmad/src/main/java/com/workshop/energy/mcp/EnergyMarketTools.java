@@ -22,11 +22,11 @@ public class EnergyMarketTools {
     }
 
     @McpTool(
-            name = "energy_get_spot_prices",
+            name = "bmad-energy_get_spot_prices",
             description = "Query Day-Ahead and Intraday electricity spot prices in EUR/MWh for a European bidding zone (DE-LU, FR, NL, AT) on a specific date (YYYY-MM-DD)."
     )
     @Tool(
-            name = "energy_get_spot_prices",
+            name = "bmad-energy_get_spot_prices",
             description = "Query Day-Ahead and Intraday electricity spot prices in EUR/MWh for a European bidding zone (DE-LU, FR, NL, AT) on a specific date (YYYY-MM-DD)."
     )
     public String getSpotPrices(
@@ -44,11 +44,11 @@ public class EnergyMarketTools {
     }
 
     @McpTool(
-            name = "energy_get_historical_prices",
+            name = "bmad-energy_get_historical_prices",
             description = "Retrieve multi-day historical electricity spot prices across a date range (up to 90 days) for trend analysis and negative price detection."
     )
     @Tool(
-            name = "energy_get_historical_prices",
+            name = "bmad-energy_get_historical_prices",
             description = "Retrieve multi-day historical electricity spot prices across a date range (up to 90 days) for trend analysis and negative price detection."
     )
     public String getHistoricalPrices(
@@ -68,11 +68,11 @@ public class EnergyMarketTools {
     }
 
     @McpTool(
-            name = "energy_get_renewable_forecast",
+            name = "bmad-energy_get_renewable_forecast",
             description = "Retrieve hourly forecasts for solar PV, onshore wind, and offshore wind generation alongside expected electrical grid load."
     )
     @Tool(
-            name = "energy_get_renewable_forecast",
+            name = "bmad-energy_get_renewable_forecast",
             description = "Retrieve hourly forecasts for solar PV, onshore wind, and offshore wind generation alongside expected electrical grid load."
     )
     public String getRenewableForecast(
@@ -90,11 +90,11 @@ public class EnergyMarketTools {
     }
 
     @McpTool(
-            name = "energy_evaluate_dispatch",
+            name = "bmad-energy_evaluate_dispatch",
             description = "Calculate optimal charging, discharging, and load-shifting schedules for battery storage or flexible electrical assets based on spot market spreads."
     )
     @Tool(
-            name = "energy_evaluate_dispatch",
+            name = "bmad-energy_evaluate_dispatch",
             description = "Calculate optimal charging, discharging, and load-shifting schedules for battery storage or flexible electrical assets based on spot market spreads."
     )
     public String evaluateDispatch(

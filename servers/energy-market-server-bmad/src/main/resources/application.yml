@@ -3,11 +3,11 @@ server:
 
 spring:
   application:
-    name: energy-market-server
+    name: bmad-energy-market-server
   ai:
     mcp:
       server:
-        name: energy-market-server
+        name: bmad-energy-market-server
         version: 1.0.0
         protocol: streamable
         streamable-http:

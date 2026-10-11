@@ -275,10 +275,10 @@ class EnergyMarketServerIntegrationTest {
                     .getResponse()
                     .getContentAsString();
 
-            assertThat(response).contains("energy_get_spot_prices");
-            assertThat(response).contains("energy_get_historical_prices");
-            assertThat(response).contains("energy_get_renewable_forecast");
-            assertThat(response).contains("energy_evaluate_dispatch");
+            assertThat(response).contains("bmad-energy_get_spot_prices");
+            assertThat(response).contains("bmad-energy_get_historical_prices");
+            assertThat(response).contains("bmad-energy_get_renewable_forecast");
+            assertThat(response).contains("bmad-energy_evaluate_dispatch");
         }
     }
 }

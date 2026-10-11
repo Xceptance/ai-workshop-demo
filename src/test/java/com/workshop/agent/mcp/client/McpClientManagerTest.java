@@ -97,10 +97,10 @@ class McpClientManagerTest {
         }
         if ("CONNECTED".equals(server8086.status())) {
             assertThat(server8086.toolCount()).isGreaterThanOrEqualTo(4);
-            assertThat(server8086.toolNames()).contains("bmad_energy_get_spot_prices");
+            assertThat(server8086.toolNames()).contains("bmad-energy_get_spot_prices");
 
-            // Calling the aliased tool delegates over HTTP with SSE unwrapping
-            var result = clientManager.executeToolCall("test-session", "bmad_energy_get_spot_prices", "{\"zone\": \"DE-LU\"}");
+            // Calling the tool delegates over HTTP with SSE unwrapping
+            var result = clientManager.executeToolCall("test-session", "bmad-energy_get_spot_prices", "{\"zone\": \"DE-LU\"}");
             assertThat(result.isSuccess()).isTrue();
             assertThat(result.resultText()).contains("averageDayAheadPrice");
         }
