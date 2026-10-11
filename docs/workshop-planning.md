@@ -80,11 +80,13 @@ A straightforward, jargon-free overview of the workshop topics and progression.
   * **Setup `AGENTS.md` live**:
     * Create a real `AGENTS.md` in the repository with build commands, directory map, and a negative rule (e.g. "do not edit `pom.xml`").
     * Watch the agent read it at the start of a task and follow it without being prompted.
-  * **Design First Hands-On Skill**:
-    * Author a clean, practical skill (e.g. `add-agent-tool` or `rule-based-code-review`) with YAML frontmatter (name, description) and a step-by-step checklist.
+  * **Design Skill 1: `git-smart-commit` (Option 2)**:
+    * Create `skills/git-smart-commit/SKILL.md` with rules for auditing staged files (no secrets/artifacts), running compile checks (`mvn test-compile`), and drafting Conventional Commits with verification evidence.
+  * **Design Skill 2: `characterization-test` (Option 3)**:
+    * Create `skills/characterization-test/SKILL.md` with rules for pinning legacy code behavior and edge cases with concrete assertions before refactoring.
   * **Watch How They Are Used**:
-    * Give the agent a prompt matching the skill.
-    * Observe how the agent spots the skill in its index, loads `SKILL.md` on demand, and executes the exact procedure.
+    * Prompt the agent to commit recent changes or write a safety-net test.
+    * Observe how the agent spots each skill in its index, loads `SKILL.md` on demand, and executes the exact procedure.
 
 ---
 
