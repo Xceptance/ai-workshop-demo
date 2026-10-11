@@ -12,7 +12,7 @@ public class AgentProperties {
         Always explain your reasoning clearly and provide helpful, concise answers.
         """;
 
-    private int maxSteps = 10;
+    private int maxSteps = 25;
     private LoggingProperties logging = new LoggingProperties();
 
     public static class LoggingProperties {
