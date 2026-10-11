@@ -76,6 +76,10 @@ A straightforward, jargon-free overview of the workshop topics and progression.
   * What a skill is: a folder with instructions and helper files for one specific task.
   * Why skills save context: the agent only indexes a lightweight metadata card and loads the full `SKILL.md` on demand.
   * Difference: `AGENTS.md` is always active for the whole repo; skills are loaded on demand.
+* **Workflows (`.agents/workflows/*.md`)**
+  * What a workflow is: a prescriptive markdown procedure orchestrating multi-phase lifecycles via slash commands (e.g. `/opsx-propose`, `/opsx-apply`).
+  * Process vs. Capability: Workflows enforce rigid process boundaries and gates (e.g. "plan first, wait for human review, do not touch code yet"), whereas Skills provide modular domain knowledge and recipes.
+  * Three Steering Layers: Rules (`AGENTS.md` = always-on guardrails) vs. Skills (`SKILL.md` = model-invoked on-demand capabilities) vs. Workflows (`workflows/*.md` = user-invoked slash-command processes).
 * **Hands-On: Setting up `AGENTS.md` and Skills**
   * **Setup `AGENTS.md` live**:
     * Create a real `AGENTS.md` in the repository with build commands, directory map, and a negative rule (e.g. "do not edit `pom.xml`").
