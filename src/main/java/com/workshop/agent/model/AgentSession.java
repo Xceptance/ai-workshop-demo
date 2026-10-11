@@ -29,6 +29,11 @@ public class AgentSession {
     private final List<AgentStepEvent> stepEvents = new CopyOnWriteArrayList<>();
     private TokenUsageStats totalTokenStats = TokenUsageStats.empty();
 
+    // Enabled/Disabled state tracking (per-session isolation)
+    private final java.util.Set<String> disabledTools = java.util.concurrent.ConcurrentHashMap.newKeySet();
+    private final java.util.Set<String> disabledMcpServers = java.util.concurrent.ConcurrentHashMap.newKeySet();
+    private final java.util.Set<String> disabledMcpTools = java.util.concurrent.ConcurrentHashMap.newKeySet();
+
     public AgentSession(String id, String title, String modelName, String systemPrompt, double temperature) {
         this.id = id;
         this.title = title;
@@ -182,4 +187,62 @@ public class AgentSession {
         this.stepEvents.clear();
         this.totalTokenStats = TokenUsageStats.empty();
     }
+
+    public boolean isToolEnabled(String toolName) {
+        if (toolName == null) return false;
+        return !disabledTools.contains(toolName.trim());
+    }
+
+    public void setToolEnabled(String toolName, boolean enabled) {
+        if (toolName == null || toolName.isBlank()) return;
+        String name = toolName.trim();
+        if (enabled) {
+            disabledTools.remove(name);
+        } else {
+            disabledTools.add(name);
+        }
+    }
+
+    public boolean isMcpServerEnabled(String serverId) {
+        if (serverId == null) return false;
+        return !disabledMcpServers.contains(serverId.trim());
+    }
+
+    public void setMcpServerEnabled(String serverId, boolean enabled) {
+        if (serverId == null || serverId.isBlank()) return;
+        String id = serverId.trim();
+        if (enabled) {
+            disabledMcpServers.remove(id);
+        } else {
+            disabledMcpServers.add(id);
+        }
+    }
+
+    public boolean isMcpToolEnabled(String toolName) {
+        if (toolName == null) return false;
+        return !disabledMcpTools.contains(toolName.trim());
+    }
+
+    public void setMcpToolEnabled(String toolName, boolean enabled) {
+        if (toolName == null || toolName.isBlank()) return;
+        String name = toolName.trim();
+        if (enabled) {
+            disabledMcpTools.remove(name);
+        } else {
+            disabledMcpTools.add(name);
+        }
+    }
+
+    public java.util.Set<String> getDisabledTools() {
+        return Collections.unmodifiableSet(new java.util.HashSet<>(disabledTools));
+    }
+
+    public java.util.Set<String> getDisabledMcpServers() {
+        return Collections.unmodifiableSet(new java.util.HashSet<>(disabledMcpServers));
+    }
+
+    public java.util.Set<String> getDisabledMcpTools() {
+        return Collections.unmodifiableSet(new java.util.HashSet<>(disabledMcpTools));
+    }
 }
+

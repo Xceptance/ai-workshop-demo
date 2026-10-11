@@ -26,12 +26,12 @@
                 <ul class="nav nav-pills mb-3 border-bottom pb-2" id="mcpTab" role="tablist">
                     <li class="nav-item" role="presentation">
                         <button class="nav-link active btn-sm" id="servers-tab" data-bs-toggle="pill" data-bs-target="#mcpServersPane" type="button" role="tab">
-                            <i class="fa-solid fa-server me-1"></i> Connected Servers (<span th:text="${#lists.size(mcpServers)}">3</span>)
+                            <i class="fa-solid fa-server me-1"></i> Connected Servers (<span id="mcpServersCount" th:text="${activeMcpServerCount != null ? activeMcpServerCount + '/' + totalMcpServerCount : #lists.size(mcpServers)}">3</span>)
                         </button>
                     </li>
                     <li class="nav-item" role="presentation">
                         <button class="nav-link btn-sm" id="tools-tab" data-bs-toggle="pill" data-bs-target="#mcpToolsPane" type="button" role="tab">
-                            <i class="fa-solid fa-cubes me-1"></i> Discovered Tools (<span th:text="${#lists.size(mcpTools)}">9</span>)
+                            <i class="fa-solid fa-cubes me-1"></i> Discovered Tools (<span id="mcpToolsCount" th:text="${activeMcpToolCount != null ? activeMcpToolCount + '/' + totalMcpToolCount : #lists.size(mcpTools)}">9</span>)
                         </button>
                     </li>
                     <li class="nav-item" role="presentation">
@@ -50,15 +50,28 @@
                                 <div class="card h-100 border-light-subtle shadow-sm">
                                     <div class="card-header bg-white border-light-subtle d-flex justify-content-between align-items-center py-2">
                                         <div class="d-flex align-items-center gap-2">
+                                            <div class="form-check form-switch m-0">
+                                                <input class="form-check-input mcp-server-toggle-switch" type="checkbox" role="switch"
+                                                       th:id="'mcp-server-switch-' + ${srv.id()}"
+                                                       th:data-server-id="${srv.id()}"
+                                                       th:checked="${agentSession != null ? agentSession.isMcpServerEnabled(srv.id()) : srv.isEnabled()}">
+                                            </div>
                                             <i class="fa-solid fa-cube text-purple"></i>
                                             <strong class="text-dark" th:text="${srv.name()}">Local Workshop Tools</strong>
                                         </div>
-                                        <span th:if="${srv.isConnected()}" class="badge bg-success-subtle text-success border border-success-subtle">
-                                            <i class="fa-solid fa-circle-check me-1"></i> Connected
-                                        </span>
-                                        <span th:unless="${srv.isConnected()}" class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle">
-                                            <i class="fa-solid fa-triangle-exclamation me-1"></i> <span th:text="${srv.status()}">Offline</span>
-                                        </span>
+                                        <div class="d-flex align-items-center gap-2">
+                                            <span th:id="'mcp-server-status-' + ${srv.id()}"
+                                                  th:if="${agentSession != null ? !agentSession.isMcpServerEnabled(srv.id()) : !srv.isEnabled()}"
+                                                  class="badge bg-secondary-subtle text-secondary border border-secondary-subtle">
+                                                <i class="fa-solid fa-ban me-1"></i> Disabled
+                                            </span>
+                                            <span th:id="'mcp-server-status-' + ${srv.id()}"
+                                                  th:unless="${agentSession != null ? !agentSession.isMcpServerEnabled(srv.id()) : !srv.isEnabled()}"
+                                                  th:class="${srv.isConnected()} ? 'badge bg-success-subtle text-success border border-success-subtle' : 'badge bg-warning-subtle text-warning-emphasis border border-warning-subtle'">
+                                                <i th:class="${srv.isConnected()} ? 'fa-solid fa-circle-check me-1' : 'fa-solid fa-triangle-exclamation me-1'"></i>
+                                                <span th:text="${srv.isConnected() ? 'Connected' : srv.status()}">Connected</span>
+                                            </span>
+                                        </div>
                                     </div>
                                     <div class="card-body py-3">
                                         <p class="small text-secondary mb-2" th:text="${srv.description()}">Server description</p>
@@ -96,10 +109,25 @@
                         <div class="list-group list-group-flush">
                             <div th:each="spec : ${mcpTools}" class="list-group-item bg-transparent text-dark border-light-subtle py-3">
                                 <div class="d-flex align-items-center justify-content-between mb-1">
-                                    <h6 class="mb-0 text-purple font-mono fw-bold">
-                                        <i class="fa-solid fa-gear me-1"></i> <span th:text="${spec.name()} + '()'">get_weather()</span>
-                                    </h6>
-                                    <span class="badge badge-purple font-mono small">MCP Tool</span>
+                                    <div class="d-flex align-items-center gap-2">
+                                        <div class="form-check form-switch m-0">
+                                            <input class="form-check-input mcp-tool-toggle-switch" type="checkbox" role="switch"
+                                                   th:id="'mcp-tool-switch-' + ${spec.name()}"
+                                                   th:data-tool-name="${spec.name()}"
+                                                   th:checked="${agentSession != null ? agentSession.isMcpToolEnabled(spec.name()) : true}">
+                                        </div>
+                                        <h6 class="mb-0 text-purple font-mono fw-bold">
+                                            <label class="form-check-label" th:for="'mcp-tool-switch-' + ${spec.name()}" style="cursor: pointer;">
+                                                <i class="fa-solid fa-gear me-1"></i> <span th:text="${spec.name()} + '()'">get_weather()</span>
+                                            </label>
+                                        </h6>
+                                    </div>
+                                    <div class="d-flex align-items-center gap-2">
+                                        <span th:id="'mcp-tool-status-' + ${spec.name()}"
+                                              th:class="${(agentSession != null ? agentSession.isMcpToolEnabled(spec.name()) : true) ? 'badge bg-success-subtle text-success border border-success-subtle' : 'badge bg-secondary-subtle text-secondary border border-secondary-subtle'}"
+                                              th:text="${(agentSession != null ? agentSession.isMcpToolEnabled(spec.name()) : true) ? 'Active' : 'Disabled'}">Active</span>
+                                        <span class="badge badge-purple font-mono small">MCP Tool</span>
+                                    </div>
                                 </div>
                                 <p class="small text-secondary mb-2" th:text="${spec.description()}">Tool Description</p>
                                 <div th:if="${spec.parameters() != null}" class="bg-light p-2 rounded border border-light-subtle small font-mono">

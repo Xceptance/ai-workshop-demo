@@ -6,6 +6,7 @@ import com.workshop.agent.config.AgentProperties;
 import com.workshop.agent.logging.ConsoleAnsiLogger;
 import com.workshop.agent.logging.SessionDiskLogger;
 import com.workshop.agent.mcp.client.McpClientManager;
+import com.workshop.agent.mcp.model.McpServerConfig;
 import com.workshop.agent.mcp.model.McpWireRecord;
 import com.workshop.agent.model.*;
 import com.workshop.agent.util.MarkdownRenderer;
@@ -126,22 +127,38 @@ public class McpAgentEngine {
         publishStep(session, inputEvent);
 
         // 2. Dynamic MCP Tool Discovery Phase
-        mcpClientManager.refreshAllServers(sessionId);
-        List<ToolSpecification> mcpToolSpecs = mcpClientManager.getDiscoveredToolSpecifications();
+        mcpClientManager.refreshAllServers(sessionId, session.getDisabledMcpServers());
+        List<ToolSpecification> allDiscoveredSpecs = mcpClientManager.getDiscoveredToolSpecifications();
+        List<ToolSpecification> mcpToolSpecs = allDiscoveredSpecs.stream()
+                .filter(spec -> session.isMcpToolEnabled(spec.name()))
+                .toList();
+        List<String> disabledToolNames = allDiscoveredSpecs.stream()
+                .map(ToolSpecification::name)
+                .filter(name -> !session.isMcpToolEnabled(name))
+                .toList();
         Map<String, Map<String, Object>> rawToolDefs = mcpClientManager.getToolRawDefinitions();
+        List<McpServerConfig> serverConfigs = mcpClientManager.getServerConfigs(session.getDisabledMcpServers());
 
         AgentStepEvent discoveryEvent = AgentStepEvent.of(
                 sessionId,
                 currentStepNumber++,
                 StepType.MCP_DISCOVERY,
                 "MCP Dynamic Tool Discovery (JSON-RPC: tools/list)",
-                "Discovered " + mcpToolSpecs.size() + " active tools from MCP servers (Local Tools + Open-Meteo Weather).",
+                "Discovered " + mcpToolSpecs.size() + " active tools from MCP servers (" + disabledToolNames.size() + " tools disabled, " + session.getDisabledMcpServers().size() + " servers disabled).",
                 toJson(Map.of(
-                        "servers", mcpClientManager.getServerConfigs(),
-                        "discoveredTools", rawToolDefs
+                        "servers", serverConfigs,
+                        "discoveredTools", rawToolDefs,
+                        "activeTools", mcpToolSpecs.stream().map(ToolSpecification::name).toList(),
+                        "disabledTools", disabledToolNames,
+                        "disabledServers", session.getDisabledMcpServers()
                 )),
                 TokenUsageStats.empty(),
-                Map.of("toolCount", mcpToolSpecs.size(), "tools", mcpToolSpecs.stream().map(ToolSpecification::name).toList())
+                Map.of(
+                        "toolCount", mcpToolSpecs.size(),
+                        "tools", mcpToolSpecs.stream().map(ToolSpecification::name).toList(),
+                        "disabledTools", disabledToolNames,
+                        "disabledServers", session.getDisabledMcpServers()
+                )
         );
         publishStep(session, discoveryEvent);
 
@@ -172,6 +189,8 @@ public class McpAgentEngine {
 
         Map<String, Object> contextPayload = new LinkedHashMap<>();
         contextPayload.put("mcpToolSpecifications", formatToolSpecifications(mcpToolSpecs));
+        contextPayload.put("disabledTools", disabledToolNames);
+        contextPayload.put("disabledServers", session.getDisabledMcpServers());
         contextPayload.put("messages", formatMessagesForAudit(conversationMessages));
 
         AgentStepEvent contextEvent = AgentStepEvent.of(
@@ -179,12 +198,15 @@ public class McpAgentEngine {
                 currentStepNumber++,
                 StepType.CONTEXT_ASSEMBLY,
                 "Context Window & MCP Schema Injection",
-                "Assembled " + conversationMessages.size() + " messages with " + mcpToolSpecs.size() + " MCP tool schemas for Gemini.",
+                "Assembled " + conversationMessages.size() + " messages with " + mcpToolSpecs.size() + " active MCP tool schemas for Gemini.",
                 toJson(contextPayload),
                 TokenUsageStats.empty(),
                 Map.of(
                         "messageCount", conversationMessages.size(),
                         "toolCount", mcpToolSpecs.size(),
+                        "activeTools", mcpToolSpecs.stream().map(ToolSpecification::name).toList(),
+                        "disabledTools", disabledToolNames,
+                        "disabledServers", session.getDisabledMcpServers(),
                         "model", session.getModelName(),
                         "thinkingLevel", session.getThinkingLevel()
                 )
@@ -210,12 +232,19 @@ public class McpAgentEngine {
             }
             modelRequestPayload.put("messages", formatMessagesForAudit(conversationMessages));
 
-            ChatRequest chatRequest = ChatRequest.builder()
-                    .messages(conversationMessages)
-                    .parameters(ChatRequestParameters.builder()
-                            .toolSpecifications(mcpToolSpecs)
-                            .build())
-                    .build();
+            ChatRequest chatRequest;
+            if (mcpToolSpecs.isEmpty()) {
+                chatRequest = ChatRequest.builder()
+                        .messages(conversationMessages)
+                        .build();
+            } else {
+                chatRequest = ChatRequest.builder()
+                        .messages(conversationMessages)
+                        .parameters(ChatRequestParameters.builder()
+                                .toolSpecifications(mcpToolSpecs)
+                                .build())
+                        .build();
+            }
 
             ChatModel activeModel = (dynamicChatModelService != null)
                     ? dynamicChatModelService.getModel(session.getModelName(), session.getThinkingLevel())
@@ -327,7 +356,8 @@ public class McpAgentEngine {
                     McpClientManager.McpToolExecutionResult execResult = mcpClientManager.executeToolCall(
                             sessionId,
                             toolRequest.name(),
-                            toolRequest.arguments()
+                            toolRequest.arguments(),
+                            session
                     );
 
                     // 1. Emit MCP Wire Tool Call Event (with dual request/response drawers)

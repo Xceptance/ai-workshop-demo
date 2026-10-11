@@ -9,6 +9,7 @@ document.addEventListener('DOMContentLoaded', () => {
     scrollToBottom('timelineScrollArea');
     renderAllMath();
     initPayloadInspector();
+    initToolAndMcpToggles();
 });
 
 window.addEventListener('load', () => {
@@ -854,4 +855,152 @@ document.addEventListener('change', function(e) {
         window.toggleReasoningTrace(e.target.checked, sessionId);
     }
 });
+
+function getSessionId() {
+    const input = document.getElementById('currentSessionId');
+    if (input && input.value) return input.value;
+    const switchEl = document.getElementById('toggleReasoningSwitch');
+    if (switchEl && switchEl.getAttribute('data-session-id')) return switchEl.getAttribute('data-session-id');
+    const urlParams = new URLSearchParams(window.location.search);
+    return urlParams.get('sessionId') || '';
+}
+
+/**
+ * Interactive Tool & MCP Server/Tool Toggles
+ */
+function initToolAndMcpToggles() {
+    // 1. Classic Java Tool toggles
+    document.addEventListener('change', function(e) {
+        const toolSwitch = e.target.closest('.tool-toggle-switch');
+        if (!toolSwitch) return;
+
+        const sessionId = getSessionId();
+        if (!sessionId) return;
+
+        const toolName = toolSwitch.getAttribute('data-tool-name');
+        const enabled = toolSwitch.checked;
+
+        fetch(`/api/session/${encodeURIComponent(sessionId)}/tools/toggle?toolName=${encodeURIComponent(toolName)}&enabled=${enabled}`, {
+            method: 'POST',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(res => res.json())
+        .then(data => {
+            const statusBadge = document.getElementById(`tool-status-badge-${toolName}`);
+            if (statusBadge) {
+                statusBadge.textContent = data.enabled ? 'Active' : 'Disabled';
+                statusBadge.className = data.enabled
+                    ? 'badge bg-success-subtle text-success border border-success-subtle'
+                    : 'badge bg-secondary-subtle text-secondary border border-secondary-subtle';
+            }
+            const toolsBadge = document.getElementById('toolsActiveCountBadge');
+            if (toolsBadge) {
+                toolsBadge.textContent = `${data.activeCount}/${data.totalCount} Active`;
+            }
+            const headerToolsBadge = document.getElementById('headerToolsBadgeCount');
+            if (headerToolsBadge) {
+                headerToolsBadge.textContent = `${data.activeCount}/${data.totalCount}`;
+            }
+        })
+        .catch(err => {
+            console.error('Failed to toggle tool:', err);
+            toolSwitch.checked = !enabled;
+        });
+    });
+
+    // 2. MCP Server toggles
+    document.addEventListener('change', function(e) {
+        const srvSwitch = e.target.closest('.mcp-server-toggle-switch');
+        if (!srvSwitch) return;
+
+        const sessionId = getSessionId();
+        if (!sessionId) return;
+
+        const serverId = srvSwitch.getAttribute('data-server-id');
+        const enabled = srvSwitch.checked;
+
+        fetch(`/api/session/${encodeURIComponent(sessionId)}/mcp/servers/toggle?serverId=${encodeURIComponent(serverId)}&enabled=${enabled}`, {
+            method: 'POST',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(res => res.json())
+        .then(data => {
+            const statusBadge = document.getElementById(`mcp-server-status-${serverId}`);
+            if (statusBadge) {
+                if (data.enabled) {
+                    statusBadge.className = 'badge bg-success-subtle text-success border border-success-subtle';
+                    statusBadge.innerHTML = '<i class="fa-solid fa-circle-check me-1"></i> Connected';
+                } else {
+                    statusBadge.className = 'badge bg-secondary-subtle text-secondary border border-secondary-subtle';
+                    statusBadge.innerHTML = '<i class="fa-solid fa-ban me-1"></i> Disabled';
+                }
+            }
+            const serversTabCount = document.getElementById('mcpServersCount');
+            if (serversTabCount) {
+                serversTabCount.textContent = `${data.activeServerCount}/${data.totalServerCount}`;
+            }
+            const toolsTabCount = document.getElementById('mcpToolsCount');
+            if (toolsTabCount) {
+                toolsTabCount.textContent = `${data.activeToolCount}/${data.totalToolCount}`;
+            }
+            const headerMcpBadge = document.getElementById('headerMcpBadgeCount');
+            if (headerMcpBadge) {
+                headerMcpBadge.textContent = `${data.activeServerCount}/${data.totalServerCount} servers, ${data.activeToolCount}/${data.totalToolCount} tools`;
+            }
+        })
+        .catch(err => {
+            console.error('Failed to toggle MCP server:', err);
+            srvSwitch.checked = !enabled;
+        });
+    });
+
+    // 3. MCP Tool toggles
+    document.addEventListener('change', function(e) {
+        const toolSwitch = e.target.closest('.mcp-tool-toggle-switch');
+        if (!toolSwitch) return;
+
+        const sessionId = getSessionId();
+        if (!sessionId) return;
+
+        const toolName = toolSwitch.getAttribute('data-tool-name');
+        const enabled = toolSwitch.checked;
+
+        fetch(`/api/session/${encodeURIComponent(sessionId)}/mcp/tools/toggle?toolName=${encodeURIComponent(toolName)}&enabled=${enabled}`, {
+            method: 'POST',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(res => res.json())
+        .then(data => {
+            const statusBadge = document.getElementById(`mcp-tool-status-${toolName}`);
+            if (statusBadge) {
+                statusBadge.textContent = data.enabled ? 'Active' : 'Disabled';
+                statusBadge.className = data.enabled
+                    ? 'badge bg-success-subtle text-success border border-success-subtle'
+                    : 'badge bg-secondary-subtle text-secondary border border-secondary-subtle';
+            }
+            const toolsTabCount = document.getElementById('mcpToolsCount');
+            if (toolsTabCount) {
+                toolsTabCount.textContent = `${data.activeCount}/${data.totalCount}`;
+            }
+            const headerMcpBadge = document.getElementById('headerMcpBadgeCount');
+            if (headerMcpBadge) {
+                const srvCountSpan = document.getElementById('mcpServersCount');
+                const srvStr = srvCountSpan ? srvCountSpan.textContent : '';
+                if (srvStr) {
+                    headerMcpBadge.textContent = `${srvStr} servers, ${data.activeCount}/${data.totalCount} tools`;
+                }
+            }
+        })
+        .catch(err => {
+            console.error('Failed to toggle MCP tool:', err);
+            toolSwitch.checked = !enabled;
+        });
+    });
+}
 

@@ -73,10 +73,10 @@
 
             <!-- Mode-Specific Inspector Modal Triggers -->
             <button th:if="${mode == 'mcp'}" type="button" class="btn btn-outline-purple btn-sm border-purple text-purple fw-semibold" data-bs-toggle="modal" data-bs-target="#mcpHubModal">
-                <i class="fa-solid fa-network-wired me-1 text-purple"></i> MCP Hub (<span th:text="${#lists.size(mcpServers)}">2</span>)
+                <i class="fa-solid fa-network-wired me-1 text-purple"></i> MCP Hub (<span id="headerMcpBadgeCount" th:text="${activeMcpServerCount != null ? activeMcpServerCount + '/' + totalMcpServerCount + ' servers, ' + activeMcpToolCount + '/' + totalMcpToolCount + ' tools' : #lists.size(mcpServers) + ' servers'}">2/3 servers, 7/9 tools</span>)
             </button>
             <button th:unless="${mode == 'mcp'}" type="button" class="btn btn-outline-secondary btn-sm" data-bs-toggle="modal" data-bs-target="#toolsModal">
-                <i class="fa-solid fa-wrench me-1"></i> Tools (<span th:text="${#lists.size(tools)}">4</span>)
+                <i class="fa-solid fa-wrench me-1"></i> Tools (<span id="headerToolsBadgeCount" th:text="${activeToolCount != null ? activeToolCount + '/' + totalToolCount : #lists.size(tools)}">4/4</span>)
             </button>
         </div>
     </div>

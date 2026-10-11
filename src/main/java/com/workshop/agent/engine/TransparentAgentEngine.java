@@ -169,9 +169,17 @@ public class TransparentAgentEngine {
         }
         conversationMessages.add(UserMessage.from(userPrompt));
 
-        List<ToolSpecification> toolSpecs = toolRegistry.getAllSpecifications();
-        String contextSummary = String.format("Assembled %d messages in context window with %d active tools.",
-                conversationMessages.size(), toolSpecs.size());
+        List<ToolSpecification> allSpecs = toolRegistry.getAllSpecifications();
+        List<ToolSpecification> toolSpecs = allSpecs.stream()
+                .filter(spec -> session.isToolEnabled(spec.name()))
+                .toList();
+        List<String> disabledToolNames = allSpecs.stream()
+                .map(ToolSpecification::name)
+                .filter(name -> !session.isToolEnabled(name))
+                .toList();
+
+        String contextSummary = String.format("Assembled %d messages in context window with %d active tools (%d disabled).",
+                conversationMessages.size(), toolSpecs.size(), disabledToolNames.size());
 
         Map<String, Object> contextMetadata = new LinkedHashMap<>();
         contextMetadata.put("systemPromptLength", session.getSystemPrompt().length());
@@ -179,9 +187,11 @@ public class TransparentAgentEngine {
         contextMetadata.put("thinkingLevel", session.getThinkingLevel());
         contextMetadata.put("historyMessageCount", conversationMessages.size());
         contextMetadata.put("activeTools", toolSpecs.stream().map(ToolSpecification::name).toList());
+        contextMetadata.put("disabledTools", disabledToolNames);
 
         Map<String, Object> contextAssemblyPayload = new LinkedHashMap<>();
         contextAssemblyPayload.put("toolSpecifications", formatToolSpecifications(toolSpecs));
+        contextAssemblyPayload.put("disabledTools", disabledToolNames);
         contextAssemblyPayload.put("messages", formatMessagesForAudit(conversationMessages));
 
         AgentStepEvent contextEvent = AgentStepEvent.of(
@@ -362,8 +372,15 @@ public class TransparentAgentEngine {
                     publishStep(session, execStartEvent);
                     turnStepEvents.add(execStartEvent);
 
-                    // Local Method Dispatch
-                    ToolRegistry.ToolExecutionResult execResult = toolRegistry.execute(toolRequest);
+                    // Local Method Dispatch with Session Enablement Guard
+                    ToolRegistry.ToolExecutionResult execResult;
+                    if (!session.isToolEnabled(toolRequest.name())) {
+                        String error = "Tool '" + toolRequest.name() + "' is currently disabled for this session.";
+                        log.warn("[TOOL-EXEC-BLOCKED] {}", error);
+                        execResult = new ToolRegistry.ToolExecutionResult(toolRequest.name(), toolRequest.arguments(), null, 0, false, error);
+                    } else {
+                        execResult = toolRegistry.execute(toolRequest);
+                    }
                     String resultText = execResult.isSuccess() ? execResult.resultText() : "ERROR: " + execResult.errorMessage();
 
                     AgentStepEvent obsEvent = AgentStepEvent.of(

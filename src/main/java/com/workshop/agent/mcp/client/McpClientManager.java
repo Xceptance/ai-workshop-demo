@@ -57,6 +57,8 @@ public class McpClientManager {
 
     // Mappings: toolName -> target server ID
     private final Map<String, String> toolToServerMap = new ConcurrentHashMap<>();
+    // Mappings: exposed toolName -> remote server wire toolName (for disambiguated tool aliases)
+    private final Map<String, String> toolToOriginalNameMap = new ConcurrentHashMap<>();
     // Discovered ToolSpecifications
     private final List<ToolSpecification> discoveredSpecifications = new CopyOnWriteArrayList<>();
     // Discovered Tool raw definitions for inspection
@@ -69,9 +71,11 @@ public class McpClientManager {
 
     // Remote WWO Endpoint
     private final String remoteWwoUrl = "https://mcp.worldweatheronline.com/mcp";
-    // Standalone Subproject Energy Market Server Endpoint
-    private final String energyServerUrl = "http://localhost:8086/mcp";
+    // Standalone Subproject Energy Market Server Endpoints
+    private final String energyServerUrl = "http://localhost:8085/mcp";
+    private final String energyBmadServerUrl = "http://localhost:8086/mcp";
     private volatile String energySessionId = null;
+    private volatile String energyBmadSessionId = null;
 
     public McpClientManager(
             LocalMcpServer localMcpServer,
@@ -95,6 +99,7 @@ public class McpClientManager {
 
     public synchronized void refreshAllServers(String sessionId, Set<String> disabledServers) {
         toolToServerMap.clear();
+        toolToOriginalNameMap.clear();
         discoveredSpecifications.clear();
         toolRawDefinitions.clear();
 
@@ -110,9 +115,14 @@ public class McpClientManager {
             discoverOpenMeteoServer(sessionId);
         }
 
-        // 3. Discover from Standalone Energy Market MCP Server (if running)
+        // 3. Discover from Standalone Energy Market MCP Server (Port 8085, if running)
         if (!disabled.contains("energy-market-server")) {
             discoverEnergyMarketServer(sessionId);
+        }
+
+        // 4. Discover from Standalone Energy Market MCP Server - BMad (Port 8086, if running)
+        if (!disabled.contains("energy-market-server-bmad")) {
+            discoverEnergyMarketBmadServer(sessionId);
         }
 
         log.info("[McpClientManager] Total discovered MCP tools: {} across servers: {}",
@@ -201,7 +211,7 @@ public class McpClientManager {
                 wwoEnabled
         ));
 
-        // 4. Standalone Energy Market Server (Spring AI 2 Subproject)
+        // 4. Standalone Energy Market Server (Port 8085)
         boolean energyEnabled = !disabled.contains("energy-market-server");
         long energyToolCount = toolToServerMap.values().stream().filter(s -> s.equals("energy-market-server")).count();
         List<String> energyTools = toolToServerMap.entrySet().stream()
@@ -210,18 +220,41 @@ public class McpClientManager {
                 .toList();
         list.add(new McpServerConfig(
                 "energy-market-server",
-                "Energy Market Server (Spring AI 2 / JDK 25)",
+                "Energy Market Server (Port 8085)",
                 "Spot electricity prices, historical data, renewable forecast & battery arbitrage",
-                "STREAMABLE_HTTP (Port 8086)",
+                "STREAMABLE_HTTP (Port 8085)",
                 energyServerUrl,
                 !energyEnabled ? "DISABLED" : (energyToolCount > 0 ? "CONNECTED" : "STANDALONE_READY"),
                 (int) energyToolCount,
                 energyTools,
                 energyToolCount > 0 ? 15L : 0L,
                 !energyEnabled ? "Server disabled by session setting" : (energyToolCount > 0
+                        ? "Active on port 8085 (no auth)"
+                        : "Standalone subproject in servers/energy-market-server (start with: mvn spring-boot:run)"),
+                energyEnabled
+        ));
+
+        // 5. Standalone Energy Market Server - BMad (Port 8086)
+        boolean energyBmadEnabled = !disabled.contains("energy-market-server-bmad");
+        long energyBmadToolCount = toolToServerMap.values().stream().filter(s -> s.equals("energy-market-server-bmad")).count();
+        List<String> energyBmadTools = toolToServerMap.entrySet().stream()
+                .filter(e -> e.getValue().equals("energy-market-server-bmad"))
+                .map(Map.Entry::getKey)
+                .toList();
+        list.add(new McpServerConfig(
+                "energy-market-server-bmad",
+                "Energy Market Server - BMad (Port 8086)",
+                "Spring AI 2 WebMVC subproject exposing energy spot, forecast, and dispatch tools",
+                "STREAMABLE_HTTP (Port 8086)",
+                energyBmadServerUrl,
+                !energyBmadEnabled ? "DISABLED" : (energyBmadToolCount > 0 ? "CONNECTED" : "STANDALONE_READY"),
+                (int) energyBmadToolCount,
+                energyBmadTools,
+                energyBmadToolCount > 0 ? 15L : 0L,
+                !energyBmadEnabled ? "Server disabled by session setting" : (energyBmadToolCount > 0
                         ? "Active on port 8086 (no auth)"
                         : "Standalone subproject in servers/energy-market-server-bmad (start with: mvn spring-boot:run)"),
-                energyEnabled
+                energyBmadEnabled
         ));
 
         return list;
@@ -312,7 +345,46 @@ public class McpClientManager {
         }
     }
 
+    private void discoverEnergyMarketBmadServer(String sessionId) {
+        String serverId = "energy-market-server-bmad";
+        this.energyBmadSessionId = null;
+        try {
+            long reqId = messageIdSequence.getAndIncrement();
+            McpProtocolMessage initReq = McpProtocolMessage.initializeRequest(reqId, "ai-mini-agent", "1.0.0");
+            long startInit = System.currentTimeMillis();
+            McpProtocolMessage initResp = sendHttpJsonRpc(energyBmadServerUrl, initReq, null, sId -> this.energyBmadSessionId = sId);
+            long durInit = System.currentTimeMillis() - startInit;
+
+            recordWireTraffic(sessionId, serverId, "STREAMABLE_HTTP", "OUTBOUND_REQUEST", "initialize", reqId, toJson(initReq), 0, true, null);
+            recordWireTraffic(sessionId, serverId, "STREAMABLE_HTTP", "INBOUND_RESPONSE", "initialize", reqId, toJson(initResp), durInit, true, null);
+
+            // Optional: send notifications/initialized
+            McpProtocolMessage notify = McpProtocolMessage.initializedNotification();
+            try {
+                sendHttpJsonRpc(energyBmadServerUrl, notify, energyBmadSessionId, sId -> this.energyBmadSessionId = sId);
+            } catch (Exception ignored) {}
+
+            long listId = messageIdSequence.getAndIncrement();
+            McpProtocolMessage listReq = McpProtocolMessage.toolsListRequest(listId);
+            long startList = System.currentTimeMillis();
+            McpProtocolMessage listResp = sendHttpJsonRpc(energyBmadServerUrl, listReq, energyBmadSessionId, sId -> this.energyBmadSessionId = sId);
+            long durList = System.currentTimeMillis() - startList;
+
+            recordWireTraffic(sessionId, serverId, "STREAMABLE_HTTP", "OUTBOUND_REQUEST", "tools/list", listId, toJson(listReq), 0, true, null);
+            recordWireTraffic(sessionId, serverId, "STREAMABLE_HTTP", "INBOUND_RESPONSE", "tools/list", listId, toJson(listResp), durList, true, null);
+
+            registerDiscoveredTools(serverId, listResp);
+            log.info("[McpClientManager] Successfully connected to Energy Market MCP Server (BMad) at {}", energyBmadServerUrl);
+        } catch (Exception e) {
+            log.debug("[McpClientManager] Energy Market MCP server (BMad) at {} not reachable: {}", energyBmadServerUrl, e.getMessage());
+        }
+    }
+
     private McpProtocolMessage sendHttpJsonRpc(String url, McpProtocolMessage message) throws Exception {
+        return sendHttpJsonRpc(url, message, energySessionId, sId -> this.energySessionId = sId);
+    }
+
+    private McpProtocolMessage sendHttpJsonRpc(String url, McpProtocolMessage message, String currentSessionId, java.util.function.Consumer<String> sessionConsumer) throws Exception {
         String reqBody = toJson(message);
         var reqBuilder = HttpRequest.newBuilder()
                 .uri(URI.create(url))
@@ -321,24 +393,46 @@ public class McpClientManager {
                 .timeout(Duration.ofSeconds(2))
                 .POST(HttpRequest.BodyPublishers.ofString(reqBody));
 
-        if (energySessionId != null) {
-            reqBuilder.header("Mcp-Session-Id", energySessionId);
+        if (currentSessionId != null) {
+            reqBuilder.header("Mcp-Session-Id", currentSessionId);
         }
 
         HttpRequest request = reqBuilder.build();
         HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
 
         if (response.statusCode() >= 400) {
-            this.energySessionId = null;
+            if (sessionConsumer != null) sessionConsumer.accept(null);
             throw new RuntimeException("HTTP " + response.statusCode() + ": " + response.body());
         }
 
         String newSessionId = response.headers().firstValue("Mcp-Session-Id").orElse(null);
-        if (newSessionId != null) {
-            this.energySessionId = newSessionId;
+        if (newSessionId != null && sessionConsumer != null) {
+            sessionConsumer.accept(newSessionId);
         }
 
-        return objectMapper.readValue(response.body(), McpProtocolMessage.class);
+        if (response.body() == null || response.body().isBlank()) {
+            return null;
+        }
+
+        String jsonBody = extractJsonFromSseOrPlain(response.body());
+        return objectMapper.readValue(jsonBody, McpProtocolMessage.class);
+    }
+
+    private String extractJsonFromSseOrPlain(String body) {
+        if (body == null || body.isBlank()) {
+            return "{}";
+        }
+        String trimmed = body.trim();
+        if (trimmed.startsWith("{") || trimmed.startsWith("[")) {
+            return trimmed;
+        }
+        for (String line : trimmed.split("\\r?\\n")) {
+            String l = line.trim();
+            if (l.startsWith("data:")) {
+                return l.substring("data:".length()).trim();
+            }
+        }
+        return trimmed;
     }
 
     @SuppressWarnings("unchecked")
@@ -353,22 +447,31 @@ public class McpClientManager {
             if (!(item instanceof Map<?, ?> rawMap)) continue;
             @SuppressWarnings("unchecked")
             Map<String, Object> toolMap = (Map<String, Object>) rawMap;
-            String name = (String) toolMap.get("name");
+            String rawName = (String) toolMap.get("name");
             String description = toolMap.get("description") != null ? toolMap.get("description").toString() : "";
             Map<String, Object> inputSchema = (Map<String, Object>) toolMap.get("inputSchema");
 
-            toolToServerMap.put(name, serverId);
-            toolRawDefinitions.put(name, (Map<String, Object>) toolMap);
+            String effectiveName = rawName;
+            if (toolToServerMap.containsKey(rawName)) {
+                String prefix = serverId.contains("bmad") ? "bmad_" : (serverId.replace("-", "_") + "_");
+                effectiveName = prefix + rawName;
+                log.info("[McpClientManager] Tool [{}] already registered from [{}], aliasing for [{}] as [{}]",
+                        rawName, toolToServerMap.get(rawName), serverId, effectiveName);
+            }
+
+            toolToServerMap.put(effectiveName, serverId);
+            toolToOriginalNameMap.put(effectiveName, rawName);
+            toolRawDefinitions.put(effectiveName, (Map<String, Object>) toolMap);
 
             JsonObjectSchema parameterSchema = convertJsonSchema(inputSchema);
             ToolSpecification spec = ToolSpecification.builder()
-                    .name(name)
+                    .name(effectiveName)
                     .description(description)
                     .parameters(parameterSchema)
                     .build();
 
             discoveredSpecifications.add(spec);
-            log.info("[McpClientManager] Registered MCP tool: [{}] from server [{}]", name, serverId);
+            log.info("[McpClientManager] Registered MCP tool: [{}] from server [{}]", effectiveName, serverId);
         }
     }
 
@@ -426,7 +529,7 @@ public class McpClientManager {
 
     public McpToolExecutionResult executeToolCall(String sessionId, String toolName, String argumentsJson, com.workshop.agent.model.AgentSession session) {
         String targetServer = toolToServerMap.getOrDefault(toolName, "local-mcp-server");
-        String transport = (targetServer.equals("open-meteo-weather") || targetServer.equals("energy-market-server")) ? "STREAMABLE_HTTP" : "LOOPBACK";
+        String transport = (targetServer.equals("open-meteo-weather") || targetServer.equals("energy-market-server") || targetServer.equals("energy-market-server-bmad")) ? "STREAMABLE_HTTP" : "LOOPBACK";
 
         if (session != null) {
             if (!session.isMcpToolEnabled(toolName)) {
@@ -453,7 +556,8 @@ public class McpClientManager {
             }
         }
 
-        McpProtocolMessage rpcRequest = McpProtocolMessage.toolsCallRequest(reqId, toolName, parsedArgs);
+        String wireToolName = toolToOriginalNameMap.getOrDefault(toolName, toolName);
+        McpProtocolMessage rpcRequest = McpProtocolMessage.toolsCallRequest(reqId, wireToolName, parsedArgs);
         String requestJson = toJson(rpcRequest);
 
         long startTime = System.currentTimeMillis();
@@ -464,7 +568,9 @@ public class McpClientManager {
             if ("open-meteo-weather".equals(targetServer)) {
                 rpcResponse = openMeteoWeatherServer.handleRequest(rpcRequest);
             } else if ("energy-market-server".equals(targetServer)) {
-                rpcResponse = sendHttpJsonRpc(energyServerUrl, rpcRequest);
+                rpcResponse = sendHttpJsonRpc(energyServerUrl, rpcRequest, energySessionId, sId -> this.energySessionId = sId);
+            } else if ("energy-market-server-bmad".equals(targetServer)) {
+                rpcResponse = sendHttpJsonRpc(energyBmadServerUrl, rpcRequest, energyBmadSessionId, sId -> this.energyBmadSessionId = sId);
             } else {
                 rpcResponse = localMcpServer.handleRequest(rpcRequest);
             }

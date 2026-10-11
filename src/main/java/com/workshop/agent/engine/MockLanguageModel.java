@@ -89,19 +89,28 @@ public class MockLanguageModel implements ChatModel {
 
         // 2. Calculations
         if (userText.contains("calculate") || userText.contains("+") || userText.contains("*") || userText.contains("multiply") || userText.contains("add")) {
-            String toolName = availableToolNames.contains("calculate") ? "calculate" : "calculate";
-            ToolExecutionRequest req = ToolExecutionRequest.builder()
-                    .id(UUID.randomUUID().toString())
-                    .name(toolName)
-                    .arguments("{\"expression\": \"42 * 8\", \"operation\": \"MULTIPLY\", \"a\": 42, \"b\": 8}")
-                    .build();
-            return ChatResponse.builder()
-                    .aiMessage(AiMessage.builder()
-                            .toolExecutionRequests(List.of(req))
-                            .thinking("User submitted an arithmetic calculation. Delegating calculation to deterministic 'calculate' tool.")
-                            .build())
-                    .tokenUsage(new TokenUsage(120, 30, 150))
-                    .build();
+            if (availableToolNames.contains("calculate")) {
+                ToolExecutionRequest req = ToolExecutionRequest.builder()
+                        .id(UUID.randomUUID().toString())
+                        .name("calculate")
+                        .arguments("{\"expression\": \"42 * 8\", \"operation\": \"MULTIPLY\", \"a\": 42, \"b\": 8}")
+                        .build();
+                return ChatResponse.builder()
+                        .aiMessage(AiMessage.builder()
+                                .toolExecutionRequests(List.of(req))
+                                .thinking("User submitted an arithmetic calculation. Delegating calculation to deterministic 'calculate' tool.")
+                                .build())
+                        .tokenUsage(new TokenUsage(120, 30, 150))
+                        .build();
+            } else {
+                return ChatResponse.builder()
+                        .aiMessage(AiMessage.builder()
+                                .text("42 * 8 = 336 (calculated directly because tool is disabled)")
+                                .thinking("Calculate tool is disabled in context. Providing direct calculation answer.")
+                                .build())
+                        .tokenUsage(new TokenUsage(70, 25, 95))
+                        .build();
+            }
         }
 
         // 3. System Info & Date/Time

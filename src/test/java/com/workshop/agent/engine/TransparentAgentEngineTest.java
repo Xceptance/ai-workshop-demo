@@ -24,6 +24,7 @@ class TransparentAgentEngineTest {
 
     private TransparentAgentEngine engine;
     private SessionDiskLogger diskLogger;
+    private ToolRegistry registry;
 
     @BeforeEach
     void setUp() {
@@ -32,7 +33,7 @@ class TransparentAgentEngineTest {
         SystemInfoTool sys = new SystemInfoTool();
         FileInspectionTool fileTool = new FileInspectionTool();
         WebSearchMockTool webTool = new WebSearchMockTool();
-        ToolRegistry registry = new ToolRegistry(calc, sys, fileTool, webTool, mapper);
+        registry = new ToolRegistry(calc, sys, fileTool, webTool, mapper);
 
         AgentProperties properties = new AgentProperties();
         properties.getLogging().setLogDir(tempLogDir.toString());
@@ -68,4 +69,59 @@ class TransparentAgentEngineTest {
         assertEquals(2, session.getMessages().size()); // 1 user + 1 assistant
         assertTrue(session.getStepEvents().size() >= 4); // User Input, Context Assembly, Model Request, Tool Call, Execution, Observation, Final Synthesis
     }
+
+    @Test
+    void testProcessTurnWithDisabledTool() {
+        String sessionId = "test-session-disabled-tool";
+        AgentSession session = engine.getOrCreateSession(sessionId);
+        session.setToolEnabled("calculate", false);
+
+        ChatMessageDto result = engine.processTurn(sessionId, "Please calculate 42 * 8");
+
+        assertNotNull(result);
+        assertEquals("assistant", result.role());
+        assertTrue(result.content().contains("calculated directly because tool is disabled"));
+
+        // Verify context assembly event metadata shows calculate as disabled
+        var contextEvent = session.getStepEvents().stream()
+                .filter(e -> e.type() == com.workshop.agent.model.StepType.CONTEXT_ASSEMBLY)
+                .findFirst()
+                .orElseThrow();
+
+        @SuppressWarnings("unchecked")
+        java.util.List<String> disabledTools = (java.util.List<String>) contextEvent.metadata().get("disabledTools");
+        assertNotNull(disabledTools);
+        assertTrue(disabledTools.contains("calculate"));
+
+        @SuppressWarnings("unchecked")
+        java.util.List<String> activeTools = (java.util.List<String>) contextEvent.metadata().get("activeTools");
+        assertNotNull(activeTools);
+        assertFalse(activeTools.contains("calculate"));
+    }
+
+    @Test
+    void testProcessTurnWithAllToolsDisabled() {
+        String sessionId = "test-session-all-disabled";
+        AgentSession session = engine.getOrCreateSession(sessionId);
+        engine.getOrCreateSession(sessionId); // ensure session exists
+        // Disable every registered tool
+        registry.getAllSpecifications().forEach(spec -> session.setToolEnabled(spec.name(), false));
+
+        ChatMessageDto result = engine.processTurn(sessionId, "Please calculate 42 * 8");
+
+
+        assertNotNull(result);
+        assertEquals("assistant", result.role());
+        assertTrue(result.content().contains("calculated directly because tool is disabled"));
+
+        var contextEvent = session.getStepEvents().stream()
+                .filter(e -> e.type() == com.workshop.agent.model.StepType.CONTEXT_ASSEMBLY)
+                .findFirst()
+                .orElseThrow();
+
+        @SuppressWarnings("unchecked")
+        java.util.List<String> activeTools = (java.util.List<String>) contextEvent.metadata().get("activeTools");
+        assertTrue(activeTools.isEmpty());
+    }
+
 }

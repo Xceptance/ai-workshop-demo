@@ -107,4 +107,68 @@ class McpAgentEngineTest {
         AgentSession session = mcpAgentEngine.getOrCreateSession(sessionId);
         assertTrue(session.getStepEvents().size() >= 4);
     }
+
+    @Test
+    void testProcessTurnWithDisabledMcpServer() {
+        String sessionId = "mcp-test-session-disabled-server";
+        AgentSession session = mcpAgentEngine.getOrCreateSession(sessionId);
+        session.setMcpServerEnabled("open-meteo-weather", false);
+
+        ChatMessageDto result = mcpAgentEngine.processTurn(sessionId, "What is the current weather in Berlin?");
+        assertNotNull(result);
+
+        var discoveryEvent = session.getStepEvents().stream()
+                .filter(e -> e.type().name().equals("MCP_DISCOVERY"))
+                .findFirst()
+                .orElseThrow();
+
+        @SuppressWarnings("unchecked")
+        java.util.Set<String> disabledServers = (java.util.Set<String>) discoveryEvent.metadata().get("disabledServers");
+        assertNotNull(disabledServers);
+        assertTrue(disabledServers.contains("open-meteo-weather"));
+
+        // No tools from open-meteo-weather should be in active tools
+        @SuppressWarnings("unchecked")
+        java.util.List<String> activeTools = (java.util.List<String>) discoveryEvent.metadata().get("tools");
+        assertFalse(activeTools.contains("get_current_weather"));
+    }
+
+    @Test
+    void testProcessTurnWithDisabledMcpTool() {
+        String sessionId = "mcp-test-session-disabled-tool";
+        AgentSession session = mcpAgentEngine.getOrCreateSession(sessionId);
+        session.setMcpToolEnabled("get_current_weather", false);
+
+        ChatMessageDto result = mcpAgentEngine.processTurn(sessionId, "What is the current weather in Berlin?");
+        assertNotNull(result);
+
+        var discoveryEvent = session.getStepEvents().stream()
+                .filter(e -> e.type().name().equals("MCP_DISCOVERY"))
+                .findFirst()
+                .orElseThrow();
+
+        @SuppressWarnings("unchecked")
+        java.util.List<String> disabledTools = (java.util.List<String>) discoveryEvent.metadata().get("disabledTools");
+        assertNotNull(disabledTools);
+        assertTrue(disabledTools.contains("get_current_weather"));
+    }
+
+    @Test
+    void testExecuteToolCallBlockedWhenDisabled() {
+        String sessionId = "mcp-test-blocked";
+        AgentSession session = mcpAgentEngine.getOrCreateSession(sessionId);
+        session.setMcpToolEnabled("calculate", false);
+
+        var result = mcpClientManager.executeToolCall(sessionId, "calculate", "{}", session);
+        assertFalse(result.isSuccess());
+        assertTrue(result.errorMessage().contains("disabled"));
+
+        session.setMcpToolEnabled("calculate", true);
+        session.setMcpServerEnabled("local-mcp-server", false);
+
+        var resultServer = mcpClientManager.executeToolCall(sessionId, "calculate", "{}", session);
+        assertFalse(resultServer.isSuccess());
+        assertTrue(resultServer.errorMessage().contains("disabled"));
+    }
+
 }

@@ -5,22 +5,44 @@
     <div class="modal-dialog modal-lg modal-dialog-scrollable">
         <div class="modal-content bg-white border text-dark shadow">
             <div class="modal-header border-light-subtle">
-                <h5 class="modal-title fw-bold" id="toolsModalLabel">
-                    <i class="fa-solid fa-wrench text-primary me-2"></i> Registered Java Agent Tools
-                </h5>
+                <div class="d-flex align-items-center gap-2">
+                    <h5 class="modal-title fw-bold mb-0" id="toolsModalLabel">
+                        <i class="fa-solid fa-wrench text-primary me-2"></i> Registered Java Agent Tools
+                    </h5>
+                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle font-mono ms-2"
+                          id="toolsActiveCountBadge"
+                          th:text="${activeToolCount != null ? activeToolCount + '/' + totalToolCount + ' Active' : 'Active'}">
+                        4/4 Active
+                    </span>
+                </div>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
                 <p class="small text-secondary">
-                    These are the Java methods annotated with <code>@Tool</code> that LangChain4j extracts into JSON Schemas and passes to the Google Gemini model.
+                    These are the Java methods annotated with <code>@Tool</code> that LangChain4j extracts into JSON Schemas and passes to the Google Gemini model. Toggle to enable or disable individual tools for this session.
                 </p>
                 <div class="list-group list-group-flush">
                     <div th:each="t : ${tools}" class="list-group-item bg-transparent text-dark border-light-subtle py-3">
                         <div class="d-flex align-items-center justify-content-between mb-1">
-                            <h6 class="mb-0 text-primary font-mono fw-bold">
-                                <i class="fa-solid fa-cube me-1"></i> <span th:text="${t.name} + '()'">calculate()</span>
-                            </h6>
-                            <span class="badge bg-light border border-secondary-subtle text-secondary font-mono small" th:text="${t.targetClassName}">CalculatorTool</span>
+                            <div class="d-flex align-items-center gap-2">
+                                <div class="form-check form-switch m-0">
+                                    <input class="form-check-input tool-toggle-switch" type="checkbox" role="switch"
+                                           th:id="'tool-switch-' + ${t.name}"
+                                           th:data-tool-name="${t.name}"
+                                           th:checked="${agentSession != null ? agentSession.isToolEnabled(t.name) : true}">
+                                </div>
+                                <h6 class="mb-0 text-primary font-mono fw-bold">
+                                    <label class="form-check-label" th:for="'tool-switch-' + ${t.name}" style="cursor: pointer;">
+                                        <i class="fa-solid fa-cube me-1"></i> <span th:text="${t.name} + '()'">calculate()</span>
+                                    </label>
+                                </h6>
+                            </div>
+                            <div class="d-flex align-items-center gap-2">
+                                <span th:id="'tool-status-badge-' + ${t.name}"
+                                      th:class="${(agentSession != null ? agentSession.isToolEnabled(t.name) : true) ? 'badge bg-success-subtle text-success border border-success-subtle' : 'badge bg-secondary-subtle text-secondary border border-secondary-subtle'}"
+                                      th:text="${(agentSession != null ? agentSession.isToolEnabled(t.name) : true) ? 'Active' : 'Disabled'}">Active</span>
+                                <span class="badge bg-light border border-secondary-subtle text-secondary font-mono small" th:text="${t.targetClassName}">CalculatorTool</span>
+                            </div>
                         </div>
                         <p class="small text-secondary mb-2" th:text="${t.description}">Tool Description</p>
                         <div th:if="${t.parameterSchema != null and !t.parameterSchema.isEmpty()}" class="bg-light p-2 rounded border border-light-subtle small font-mono">

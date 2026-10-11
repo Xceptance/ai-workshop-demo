@@ -38,7 +38,11 @@ class AgentWebControllerTest {
                 .andExpect(view().name("index"))
                 .andExpect(model().attribute("modelName", "gemini-3.8-flash"))
                 .andExpect(model().attribute("thinkingLevel", "medium"))
-                .andExpect(model().attribute("showReasoning", true));
+                .andExpect(model().attribute("showReasoning", true))
+                .andExpect(model().attributeExists("activeToolCount"))
+                .andExpect(model().attributeExists("totalToolCount"))
+                .andExpect(model().attributeExists("activeMcpServerCount"))
+                .andExpect(model().attributeExists("totalMcpServerCount"));
     }
 
     @Test
@@ -90,4 +94,53 @@ class AgentWebControllerTest {
                 .andExpect(jsonPath("$.modelName").value("gemini-2.5-pro"))
                 .andExpect(jsonPath("$.thinkingLevel").value("low"));
     }
+
+    @Test
+    void testToggleToolEndpoint() throws Exception {
+        mockMvc.perform(post("/api/session/tool-toggle-sess/tools/toggle")
+                        .param("toolName", "calculate")
+                        .param("enabled", "false"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("success"))
+                .andExpect(jsonPath("$.toolName").value("calculate"))
+                .andExpect(jsonPath("$.enabled").value(false));
+
+        mockMvc.perform(post("/api/session/tool-toggle-sess/tools/toggle")
+                        .param("toolName", "calculate"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("success"))
+                .andExpect(jsonPath("$.toolName").value("calculate"))
+                .andExpect(jsonPath("$.enabled").value(true));
+    }
+
+    @Test
+    void testToggleMcpServerEndpoint() throws Exception {
+        mockMvc.perform(post("/api/session/mcp-toggle-sess/mcp/servers/toggle")
+                        .param("serverId", "open-meteo-weather")
+                        .param("enabled", "false"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("success"))
+                .andExpect(jsonPath("$.serverId").value("open-meteo-weather"))
+                .andExpect(jsonPath("$.enabled").value(false));
+
+        mockMvc.perform(post("/api/session/mcp-toggle-sess/mcp/servers/toggle")
+                        .param("serverId", "open-meteo-weather")
+                        .param("enabled", "true"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("success"))
+                .andExpect(jsonPath("$.serverId").value("open-meteo-weather"))
+                .andExpect(jsonPath("$.enabled").value(true));
+    }
+
+    @Test
+    void testToggleMcpToolEndpoint() throws Exception {
+        mockMvc.perform(post("/api/session/mcp-tool-toggle-sess/mcp/tools/toggle")
+                        .param("toolName", "get_current_weather")
+                        .param("enabled", "false"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("success"))
+                .andExpect(jsonPath("$.toolName").value("get_current_weather"))
+                .andExpect(jsonPath("$.enabled").value(false));
+    }
+
 }

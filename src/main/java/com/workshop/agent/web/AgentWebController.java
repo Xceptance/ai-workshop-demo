@@ -4,6 +4,7 @@ import com.workshop.agent.config.ApiKeyResolver;
 import com.workshop.agent.config.GeminiProperties;
 import com.workshop.agent.engine.TransparentAgentEngine;
 import com.workshop.agent.logging.SessionDiskLogger;
+import com.workshop.agent.mcp.model.McpServerConfig;
 import com.workshop.agent.model.AgentSession;
 import com.workshop.agent.model.ChatMessageDto;
 import com.workshop.agent.tools.ToolRegistry;
@@ -18,6 +19,7 @@ import org.springframework.web.bind.annotation.*;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -262,16 +264,106 @@ public class AgentWebController {
         ));
     }
 
+    @PostMapping("/api/session/{sessionId}/tools/toggle")
+    @ResponseBody
+    public ResponseEntity<?> toggleTool(
+            @PathVariable("sessionId") String sessionId,
+            @RequestParam("toolName") String toolName,
+            @RequestParam(value = "enabled", required = false) Boolean enabled
+    ) {
+        AgentSession session = agentEngine.getOrCreateSession(sessionId);
+        boolean newState = (enabled != null) ? enabled : !session.isToolEnabled(toolName);
+        session.setToolEnabled(toolName, newState);
+
+        var toolDtos = toolRegistry.getToolDtos();
+        long activeCount = toolDtos.stream().filter(t -> session.isToolEnabled(t.name())).count();
+
+        return ResponseEntity.ok(Map.of(
+                "status", "success",
+                "sessionId", sessionId,
+                "toolName", toolName,
+                "enabled", newState,
+                "activeCount", activeCount,
+                "totalCount", toolDtos.size()
+        ));
+    }
+
+    @PostMapping("/api/session/{sessionId}/mcp/servers/toggle")
+    @ResponseBody
+    public ResponseEntity<?> toggleMcpServer(
+            @PathVariable("sessionId") String sessionId,
+            @RequestParam("serverId") String serverId,
+            @RequestParam(value = "enabled", required = false) Boolean enabled
+    ) {
+        AgentSession session = agentEngine.getOrCreateSession(sessionId);
+        boolean newState = (enabled != null) ? enabled : !session.isMcpServerEnabled(serverId);
+        session.setMcpServerEnabled(serverId, newState);
+
+        mcpClientManager.refreshAllServers(sessionId, session.getDisabledMcpServers());
+        var configs = mcpClientManager.getServerConfigs(session.getDisabledMcpServers());
+        long activeServers = configs.stream().filter(McpServerConfig::isConnected).count();
+        var specs = mcpClientManager.getDiscoveredToolSpecifications();
+        long activeTools = specs.stream().filter(s -> session.isMcpToolEnabled(s.name())).count();
+
+        return ResponseEntity.ok(Map.of(
+                "status", "success",
+                "sessionId", sessionId,
+                "serverId", serverId,
+                "enabled", newState,
+                "activeServerCount", activeServers,
+                "totalServerCount", configs.size(),
+                "activeToolCount", activeTools,
+                "totalToolCount", specs.size()
+        ));
+    }
+
+    @PostMapping("/api/session/{sessionId}/mcp/tools/toggle")
+    @ResponseBody
+    public ResponseEntity<?> toggleMcpTool(
+            @PathVariable("sessionId") String sessionId,
+            @RequestParam("toolName") String toolName,
+            @RequestParam(value = "enabled", required = false) Boolean enabled
+    ) {
+        AgentSession session = agentEngine.getOrCreateSession(sessionId);
+        boolean newState = (enabled != null) ? enabled : !session.isMcpToolEnabled(toolName);
+        session.setMcpToolEnabled(toolName, newState);
+
+        var specs = mcpClientManager.getDiscoveredToolSpecifications();
+        long activeTools = specs.stream().filter(s -> session.isMcpToolEnabled(s.name())).count();
+
+        return ResponseEntity.ok(Map.of(
+                "status", "success",
+                "sessionId", sessionId,
+                "toolName", toolName,
+                "enabled", newState,
+                "activeCount", activeTools,
+                "totalCount", specs.size()
+        ));
+    }
+
     private void populateModel(Model model, AgentSession session) {
+        var toolDtos = toolRegistry.getToolDtos();
+        long activeTools = toolDtos.stream().filter(t -> session.isToolEnabled(t.name())).count();
+        var serverConfigs = mcpClientManager.getServerConfigs(session.getDisabledMcpServers());
+        long activeServers = serverConfigs.stream().filter(McpServerConfig::isConnected).count();
+        var mcpToolSpecs = mcpClientManager.getDiscoveredToolSpecifications();
+        long activeMcpTools = mcpToolSpecs.stream().filter(s -> session.isMcpToolEnabled(s.name())).count();
+
         model.addAttribute("agentSession", session);
         model.addAttribute("sessionId", session.getId());
         model.addAttribute("mode", session.getMode());
         model.addAttribute("messages", session.getMessages());
         model.addAttribute("stepEvents", session.getStepEvents());
         model.addAttribute("tokenStats", session.getTotalTokenStats());
-        model.addAttribute("tools", toolRegistry.getToolDtos());
-        model.addAttribute("mcpServers", mcpClientManager.getServerConfigs());
-        model.addAttribute("mcpTools", mcpClientManager.getDiscoveredToolSpecifications());
+        model.addAttribute("tools", toolDtos);
+        model.addAttribute("activeToolCount", activeTools);
+        model.addAttribute("totalToolCount", toolDtos.size());
+        model.addAttribute("mcpServers", serverConfigs);
+        model.addAttribute("activeMcpServerCount", activeServers);
+        model.addAttribute("totalMcpServerCount", serverConfigs.size());
+        model.addAttribute("mcpTools", mcpToolSpecs);
+        model.addAttribute("activeMcpToolCount", activeMcpTools);
+        model.addAttribute("totalMcpToolCount", mcpToolSpecs.size());
         model.addAttribute("mcpTraffic", mcpClientManager.getSessionTraffic(session.getId()));
         model.addAttribute("modelName", session.getModelName() != null ? session.getModelName() : geminiProperties.getModelName());
         model.addAttribute("thinkingLevel", session.getThinkingLevel() != null ? session.getThinkingLevel() : "medium");
