@@ -131,25 +131,38 @@ A straightforward, jargon-free overview of the workshop topics and progression.
   * **Plan**: have the agent write a short design and ask questions before editing code.
   * **Guide**: implement in phases (data -> logic -> UI -> tests); don't do everything in one prompt.
   * **Trail**: explain non-obvious code in comments, document verification results, and update project notes.
-* **Example 1: Simple Track (`LRUClockMap`)**
-  * Code: an open-addressing hash map with second-chance clock eviction.
-  * Task: add TTL support / expiring entries.
-  * Testing: write characterization tests for second-chance eviction, collision handling, and overwrites.
-* **Example 2: Unit Testing, Coverage, Review & Mutation Testing (pitest)**
-  * **The Goal**: Write unit tests for existing code, improve them using coverage, perform review cycles, and harden test assertions with mutation testing (`pitest`).
-  * **Workflow in Action**:
-    1. **Write Initial Tests**: Have the agent inspect an existing class and generate unit tests.
-    2. **Coverage Check**: Run code coverage (JaCoCo) to identify uncovered branches and boundary conditions; guide the agent to cover them.
-    3. **Review Cycle**: Inspect the tests for AI anti-patterns (weak assertions, tautologies, assertions that don't test anything).
-    4. **Mutation Testing (`pitest`)**: Run `pitest` to mutate bytecode. Look at surviving mutants (tests passed even though the code was mutated!), guide the agent to analyze the survival, and harden assertions to kill all mutants.
-* **Example 3: Small Application with its own MCP Server**
-  * **The Idea**: Build a small application that manages simple data with a clean UI, and write an MCP server on top of it so external agents can interact with it.
-  * **The Application**: A lightweight web app maintaining simple data (e.g. tasks, inventory, or notes) with a simple browser UI.
-  * **Writing the MCP Server**:
-    * Expose tools for an agent to query, create, or modify the data.
-    * Expose resources so an agent can read the current state directly.
-  * **Workflow in Action**:
-    1. **Plan & Build the App**: Use the agent to create the data model, storage, and a simple UI (Talk, Plan, Guide, Trail).
-    2. **Implement the MCP Server**: Have the agent build an MCP interface (stdio or HTTP/SSE) exposing the application's actions.
-    3. **Drive It from an Agent**: Connect an external agent (Claude Code, Cursor, or our demo agent) to our new MCP server, prompt it to manage the data, and watch the UI update live.
-    4. **Leave a Trail**: Document the MCP tool schemas, verify with tests, and record the setup steps.
+* **Exercise 1: The Wild West — Brute Force on `LRUClockMap` (No `AGENTS.md`)**
+  * **The Goal**: Experience firsthand why raw, unguided agent development breaks down on non-trivial code.
+  * **The Code**: An open-addressing hash map (`LRUClockMap.java`) with second-chance clock eviction and zero-allocation parallel arrays.
+  * **The Task**: Give the agent a single, unconstrained prompt: *"Add TTL support so entries expire after a duration. Make it work and add tests."*
+  * **Failure Modes Observed**:
+    * Agent guesses wrong build/test commands.
+    * Breaks memory invariants by wrapping primitives into `Entry` objects (destroying cache efficiency).
+    * Introduces hash collision holes in open-addressing linear probing.
+    * Writes flaky timing tests with `Thread.sleep()`.
+    * Falls into the "try again" trap: edits or deletes failing tests to make them pass.
+
+* **Exercise 2: Disciplined Engineering — `LRUClockMap` with `AGENTS.md`, TDD & Review**
+  * **The Goal**: Take the exact same code and requirement, but apply professional guardrails and a multi-step workflow.
+  * **The Guardrails (`AGENTS.md`)**:
+    * Explicit build/test commands (`mvn test -Dtest=...`).
+    * Negative rules: *"Do NOT allocate wrapper objects (use parallel arrays)"*, *"NEVER delete or weaken tests"*, *"No Thread.sleep"*.
+  * **Workflow in Action (Talk, Plan, Guide, Trail)**:
+    1. **Characterize**: Write characterization tests locking in existing collision probing and clock eviction *before* touching code.
+    2. **Plan**: Prompt the agent for a technical design proposal (parallel `long[] expiry` array, injected `LongSupplier clock`).
+    3. **Guide (TDD)**: Implement test-first using a mock clock for deterministic assertions.
+    4. **Trail (Harden with Mutation Testing)**: Run code coverage (JaCoCo) and mutation testing (`pitest`) to detect weak assertions, guide the agent to analyze surviving mutants, and harden tests.
+
+* **Exercise 3: Spec-Driven Application — "CueCards" with OpenSpec & MCP**
+  * **The Idea**: Build a complete, cohesive small application that humans and machines (agents) can set, read, update, and manage together.
+  * **The Application ("CueCards")**:
+    * A lightweight living memory board: compact cue cards containing rules, cheat sheets, runbook snippets, or lessons learned.
+    * Fields: `id`, `title`, `tags` (`#java`, `#git`, `#reminder`), `content` (markdown), `author` (*human* vs *agent*), `updatedAt`.
+    * A clean, visual card deck UI with tag filtering, search, and markdown preview.
+  * **The OpenSpec Pipeline**:
+    1. **Proposal (`proposal.md`)**: Human & agent shared memory board, goals, non-goals.
+    2. **Delta Specs (`specs/cuecard-management/`)**: Behavioral contracts (unique slugs/titles, tag normalization, search semantics, update rules).
+    3. **Design & Tasks (`design.md`, `tasks.md`)**: In-memory/file storage $\rightarrow$ REST controller $\rightarrow$ Web UI $\rightarrow$ Verification.
+  * **The MCP Extension**:
+    * Expose MCP tools: `list_cuecards(tag)`, `read_cuecard(id_or_title)`, `save_cuecard(title, content, tags)`, `update_cuecard(id, content)`.
+    * **The Live Demo**: A human creates cards in the browser; an external agent reads instructions from a card and posts back newly learned lessons over MCP; the card board updates live in real-time.
