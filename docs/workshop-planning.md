@@ -34,13 +34,6 @@ A straightforward, jargon-free overview of the workshop topics and progression.
     * Keep prompts focused; avoid pasting huge raw logs or irrelevant files.
     * Ask for concise, direct answers instead of lengthy explanations.
     * Reset early: start a fresh chat when switching tasks so you don't pay to re-send old conversation history.
-* **Offloading to a New Chat (Clean Handoffs)**
-  * The problem with long conversations: attention degradation, compounding token billing on every turn, and error anchoring (fixating on failed attempts).
-  * The 3-step offloading workflow:
-    1. **Summarize State**: Have the agent write a short progress checkpoint (e.g. `HANDOFF.md`) capturing current status, decisions, and remaining tasks.
-    2. **Commit Code**: Check in working changes to Git so the repo is the durable source of truth.
-    3. **Fresh Start**: Open a new chat session seeded only with the summary note and relevant file references.
-  * The payoff: 80–90% reduction in prompt token overhead, faster response times, and restored reasoning sharpness.
 
 ---
 
@@ -103,6 +96,13 @@ A straightforward, jargon-free overview of the workshop topics and progression.
   * Context hygiene: ignoring build folders and caches (`target/`, `.git/`, `node_modules/`) with `.claudeignore` or `.cursorignore`.
   * Prompt caching: structuring stable system prompts, tool definitions, and repository guidelines so the provider can cache tokens, slashing cost and latency.
   * Clean handoffs: summarizing current progress into a `HANDOFF.md` file before starting a fresh chat.
+* **Offloading to a New Chat (Clean Handoffs)**
+  * The problem with long conversations: attention degradation, compounding token billing on every turn, and error anchoring (fixating on failed attempts).
+  * The 3-step offloading workflow:
+    1. **Summarize State**: Have the agent write a short progress checkpoint (e.g. `HANDOFF.md`) capturing current status, decisions, and remaining tasks.
+    2. **Commit Code**: Check in working changes to Git so the repo is the durable source of truth.
+    3. **Fresh Start**: Open a new chat session seeded only with the summary note and relevant file references.
+  * The payoff: 80–90% reduction in prompt token overhead, faster response times, and restored reasoning sharpness.
 * **Writing Specifications First (OpenSpec)**
   * Why prompt-and-pray coding fails on non-trivial features: ambiguous scope, architectural drift, self-graded "success".
   * The 4 OpenSpec artifacts:
