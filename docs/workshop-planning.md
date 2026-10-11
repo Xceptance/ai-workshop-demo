@@ -87,9 +87,9 @@ A straightforward, jargon-free overview of the workshop topics and progression.
   * Connection types: local subprocesses (`stdio`) or network streams (`HTTP/SSE`).
   * Why MCP is close to agents: it uses the exact same tool-calling pattern, just over a standard protocol.
   * The 3 MCP primitives:
-    * **Tools**: functions the model can execute.
-    * **Resources**: data the model can read (files, logs, database schemas).
-    * **Prompts**: pre-made prompt templates and commands.
+    * **Tools**: functions the model can execute. (*Almost everyone only builds Tools!*)
+    * **Resources**: data the model can read (files, logs, database schemas). Often bypassed in favor of active query tools.
+    * **Prompts**: pre-made prompt templates and commands. (*Almost nobody touches the Prompts protocol!* Host agents manage workflows via client-side skills and system prompts).
 * **Extending Agents via MCP in Practice**
   * **Why it matters**: write a tool once in Python, Node, or Go $\rightarrow$ any agent can use it immediately without recompiling.
   * **Connecting an MCP tool**:

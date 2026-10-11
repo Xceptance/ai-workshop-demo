@@ -147,6 +147,6 @@ sequenceDiagram
 * **The Agent is the Brain & Loop:** The agent owns the iterative cognition—assessing user goals, deciding which tool to call, managing context memory, handling failure loops, and knowing when the task is complete.
 * **MCP is the Universal Interface ("The USB-C Cable"):** MCP standardizes the connection between that brain and external systems. An agent runtime (whether in Java, TypeScript, or Rust) can instantly connect to pre-built MCP servers for GitHub, PostgreSQL, Docker, or Google Cloud without writing custom API adapters.
 * **The Three Core MCP Primitives:**
-  1. **Tools:** Executable actions that alter state or fetch dynamic data (`tools/call`).
-  2. **Resources:** Passive readable context, URIs, and file streams (`resources/read`).
-  3. **Prompts:** Reusable workflow templates and interactive prompt slash commands (`prompts/get`).
+  1. **Tools:** Executable actions that alter state or fetch dynamic data (`tools/call`). *(Industry reality: almost everyone only builds Tools!)*
+  2. **Resources:** Passive readable context, URIs, and file streams (`resources/read`). Often bypassed in favor of active query tools.
+  3. **Prompts:** Reusable workflow templates and interactive prompt slash commands (`prompts/get`). *(Industry reality: almost nobody touches the Prompts protocol—clients manage prompts and skills natively).*

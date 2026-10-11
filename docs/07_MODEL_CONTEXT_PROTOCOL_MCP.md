@@ -54,7 +54,25 @@ The **Model Context Protocol (MCP)** solves this by standardizing the connection
 
 ---
 
-## 3. The Protocol Wire Mechanics: JSON-RPC 2.0
+## 3. The Three Primitives of MCP: Tools, Resources, and Prompts
+
+The Model Context Protocol specification defines three distinct primitives for exposing capabilities and context from an MCP server to an MCP host:
+
+| Primitive | Wire Methods | Controlled By | Purpose & Semantics | Industry Reality |
+|---|---|---|---|---|
+| **Tools** | `tools/list`<br>`tools/call` | **Model** | Executable actions that accept arguments, execute business or system logic, and return text/binary observations. Alters state or fetches dynamic data. | **Almost everyone only builds Tools!** Provides immediate agency to the agent (APIs, DB queries, calculations, bash commands). |
+| **Resources** | `resources/list`<br>`resources/read` | **Application** | Passive readable context (files, database schemas, log streams) addressed by URI (`file://`, `postgres://`). Read-only context attachments. | **Frequently bypassed.** Developers prefer active search/read tools (`read_file`, `query_logs`) over passive attachments. |
+| **Prompts** | `prompts/list`<br>`prompts/get` | **User** | Pre-packaged prompt templates and parameterized slash commands exposed by the server into the host UI. | **Almost nobody touches the Prompts protocol!** Host agents manage prompt engineering client-side via skills, rules (`AGENTS.md`), and system instructions. |
+
+### Why Tools Dominate and Prompts Are Ignored in Practice:
+
+1. **Agency Comes from Tools:** What makes an agent valuable is its ability to take autonomous action—reading files, querying APIs, running migrations, or executing tests. Tools are the only primitive that the model itself chooses to invoke during its cognitive reasoning loop.
+2. **Prompts Protocol Friction:** The MCP `prompts` protocol requires the host UI to parse server-declared templates and present them as interactive user commands (slash commands) in the chat client. Most agent hosts (Cursor, Claude Code, Antigravity, OpenCode) already have their own rich, native prompt and skill ecosystems (e.g., `AGENTS.md`, `SKILL.md`, custom system prompt configurations). Hosts rarely surrender prompt engineering or UI workflows to third-party MCP servers.
+3. **Resources vs. Tools Overlap:** A resource attaches passive data to the context window. However, attaching large datasets (like an entire schema or log dump) burns context tokens quickly. Developers usually replace resources with targeted tools (e.g. `search_logs(query)` or `describe_table(name)`) so the agent queries only what it needs, when it needs it.
+
+---
+
+## 4. The Protocol Wire Mechanics: JSON-RPC 2.0
 
 MCP is strictly grounded in the **JSON-RPC 2.0** specification. Every message is a plain JSON object with `jsonrpc: "2.0"`.
 
@@ -191,7 +209,7 @@ The agent extracts the observation text from `result.content[0].text` and inject
 
 ---
 
-## 4. MCP Transports: STDIO vs. Streamable HTTP
+## 5. MCP Transports: STDIO vs. Streamable HTTP
 
 MCP defines two standard transport mechanisms:
 
@@ -206,7 +224,7 @@ MCP defines two standard transport mechanisms:
 
 ---
 
-## 5. Exploring the Workshop MCP Demo
+## 6. Exploring the Workshop MCP Demo
 
 In the top navbar of the web dashboard:
 1. Click **MCP Demo** to activate Model Context Protocol mode.
