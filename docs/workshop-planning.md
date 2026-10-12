@@ -27,7 +27,7 @@ A straightforward, jargon-free overview of the workshop topics and progression.
   * Example tokenization: `public class LRUClockMap<K, V>` split into 11 sub-word tokens.
 * **Token Types & Pricing Models**
   * Three token types: Input (prompts, context, history), Output (generated answers, 3–5x more expensive), and Cached (KV cache at 75–90% discount).
-  * Price comparison (per 1M tokens): Gemini 2.0 Flash, Claude 3.5 Sonnet, Claude 3 Opus, Kimi, Qwen.
+  * Price comparison (per 1M tokens): Gemini Flash 3.8, Claude Sonnet 5.5, Claude Opus 5.5, Kimi K3, Qwen 3.8.
 * **Mini-Exercise: Watching Token Consumption**
   * Check token baseline meter in agent UI (Kilo, Claude Code, Antigravity).
   * Ask a simple question to measure input vs. output split.
