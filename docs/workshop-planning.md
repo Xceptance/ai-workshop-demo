@@ -21,19 +21,17 @@ A straightforward, jargon-free overview of the workshop topics and progression.
   * Tools define the attack vector: bash and file access expose the environment to indirect prompt injection and destructive operations (`rm -rf`, `git reset --hard`).
   * Harnesses vs. Custom Agents: pre-built tools enforce permission confirmation modals; custom agent runners (Spring Boot, LangChain4j) require developer-implemented sandboxing and authorization.
   * Defensive guardrails: read-only defaults, human-in-the-loop approvals, strict workspace boundaries, and negative constraints in `AGENTS.md`.
-* **Levels of Autonomy**
-  * Level 1: Web chat (Q&A sandbox, 100% manual copy-paste).
-  * Level 2: In-editor autocomplete (Copilot, passive single-file inline suggestions).
-  * Level 3: Workspace agents with tool access and human approval (Claude Code, Cursor, Antigravity).
-  * Level 4: Background agents working on tasks/issues autonomously (headless workers triggered by issues/CI, submitting PRs).
-* **Tokens & Usage: Watching Consumption**
-  * What is a token? Text chunks (~3–4 characters or ~0.75 words) that the model reads and writes.
-  * Input vs. Output: Input tokens (prompt + context + tool schemas) vs. Output tokens (the model's generated answer, which costs significantly more and takes longer).
-  * Seeing and watching tokens: checking token meters in tools, inspecting API usage metadata (`prompt_tokens`, `completion_tokens`), and reviewing audit traces.
-  * Basic strategies to manage usage:
-    * Keep prompts focused; avoid pasting huge raw logs or irrelevant files.
-    * Ask for concise, direct answers instead of lengthy explanations.
-    * Reset early: start a fresh chat when switching tasks so you don't pay to re-send old conversation history.
+* **What Is a Token? (Tokenization)**
+  * What is a token? Text chunks (~3–4 characters or ~0.75 words) that models read and write as numeric IDs.
+  * Code & symbols: Syntax, whitespace, and non-English text consume more tokens per word.
+  * Example tokenization: `public class LRUClockMap<K, V>` split into 11 sub-word tokens.
+* **Token Types & Pricing Models**
+  * Three token types: Input (prompts, context, history), Output (generated answers, 3–5x more expensive), and Cached (KV cache at 75–90% discount).
+  * Price comparison (per 1M tokens): Gemini 2.0 Flash, Claude 3.5 Sonnet, Claude 3 Opus, Kimi, Qwen.
+* **Mini-Exercise: Watching Token Consumption**
+  * Check token baseline meter in agent UI (Kilo, Claude Code, Antigravity).
+  * Ask a simple question to measure input vs. output split.
+  * Trigger a file read (`SumOfThings.java`) and observe how input token count jumps and persists.
 
 ---
 
