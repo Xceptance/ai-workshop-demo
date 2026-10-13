@@ -74,8 +74,10 @@ public class McpClientManager {
     // Standalone Subproject Energy Market Server Endpoints
     private final String energyServerUrl = "http://localhost:8085/mcp";
     private final String energyBmadServerUrl = "http://localhost:8086/mcp";
+    private final String randomNamesServerUrl = System.getProperty("random.names.server.url", "http://localhost:" + System.getProperty("random.names.server.port", "9000") + "/mcp");
     private volatile String energySessionId = null;
     private volatile String energyBmadSessionId = null;
+    private volatile String randomNamesSessionId = null;
 
     public McpClientManager(
             LocalMcpServer localMcpServer,
@@ -123,6 +125,11 @@ public class McpClientManager {
         // 4. Discover from Standalone Energy Market MCP Server - BMad (Port 8086, if running)
         if (!disabled.contains("energy-market-server-bmad")) {
             discoverEnergyMarketBmadServer(sessionId);
+        }
+
+        // 5. Discover from Standalone Random Names MCP Server (Port 9000, if running)
+        if (!disabled.contains("random-names-server")) {
+            discoverRandomNamesServer(sessionId);
         }
 
         log.info("[McpClientManager] Total discovered MCP tools: {} across servers: {}",
@@ -257,6 +264,29 @@ public class McpClientManager {
                 energyBmadEnabled
         ));
 
+        // 6. Standalone Random Names Server (Port 9000)
+        boolean randomNamesEnabled = !disabled.contains("random-names-server");
+        long randomNamesToolCount = toolToServerMap.values().stream().filter(s -> s.equals("random-names-server")).count();
+        List<String> randomNamesTools = toolToServerMap.entrySet().stream()
+                .filter(e -> e.getValue().equals("random-names-server"))
+                .map(Map.Entry::getKey)
+                .toList();
+        list.add(new McpServerConfig(
+                "random-names-server",
+                "Random Names Server (Port 9000)",
+                "Tools, Resources & Prompts for selecting from 10 workshop participants (proves external MCP execution)",
+                "STREAMABLE_HTTP (Port 9000)",
+                randomNamesServerUrl,
+                !randomNamesEnabled ? "DISABLED" : (randomNamesToolCount > 0 ? "CONNECTED" : "STANDALONE_READY"),
+                (int) randomNamesToolCount,
+                randomNamesTools,
+                randomNamesToolCount > 0 ? 10L : 0L,
+                !randomNamesEnabled ? "Server disabled by session setting" : (randomNamesToolCount > 0
+                        ? "Active on port 9000 (no auth)"
+                        : "Standalone subproject in server/random-names (start with: mvn spring-boot:run)"),
+                randomNamesEnabled
+        ));
+
         return list;
     }
 
@@ -377,6 +407,41 @@ public class McpClientManager {
             log.info("[McpClientManager] Successfully connected to Energy Market MCP Server (BMad) at {}", energyBmadServerUrl);
         } catch (Exception e) {
             log.debug("[McpClientManager] Energy Market MCP server (BMad) at {} not reachable: {}", energyBmadServerUrl, e.getMessage());
+        }
+    }
+
+    private void discoverRandomNamesServer(String sessionId) {
+        String serverId = "random-names-server";
+        this.randomNamesSessionId = null;
+        try {
+            long reqId = messageIdSequence.getAndIncrement();
+            McpProtocolMessage initReq = McpProtocolMessage.initializeRequest(reqId, "ai-mini-agent", "1.0.0");
+            long startInit = System.currentTimeMillis();
+            McpProtocolMessage initResp = sendHttpJsonRpc(randomNamesServerUrl, initReq, null, sId -> this.randomNamesSessionId = sId);
+            long durInit = System.currentTimeMillis() - startInit;
+
+            recordWireTraffic(sessionId, serverId, "STREAMABLE_HTTP", "OUTBOUND_REQUEST", "initialize", reqId, toJson(initReq), 0, true, null);
+            recordWireTraffic(sessionId, serverId, "STREAMABLE_HTTP", "INBOUND_RESPONSE", "initialize", reqId, toJson(initResp), durInit, true, null);
+
+            // Send notifications/initialized
+            McpProtocolMessage notify = McpProtocolMessage.initializedNotification();
+            try {
+                sendHttpJsonRpc(randomNamesServerUrl, notify, randomNamesSessionId, sId -> this.randomNamesSessionId = sId);
+            } catch (Exception ignored) {}
+
+            long listId = messageIdSequence.getAndIncrement();
+            McpProtocolMessage listReq = McpProtocolMessage.toolsListRequest(listId);
+            long startList = System.currentTimeMillis();
+            McpProtocolMessage listResp = sendHttpJsonRpc(randomNamesServerUrl, listReq, randomNamesSessionId, sId -> this.randomNamesSessionId = sId);
+            long durList = System.currentTimeMillis() - startList;
+
+            recordWireTraffic(sessionId, serverId, "STREAMABLE_HTTP", "OUTBOUND_REQUEST", "tools/list", listId, toJson(listReq), 0, true, null);
+            recordWireTraffic(sessionId, serverId, "STREAMABLE_HTTP", "INBOUND_RESPONSE", "tools/list", listId, toJson(listResp), durList, true, null);
+
+            registerDiscoveredTools(serverId, listResp);
+            log.info("[McpClientManager] Successfully connected to Random Names MCP Server at {}", randomNamesServerUrl);
+        } catch (Exception e) {
+            log.debug("[McpClientManager] Random Names MCP server at {} not reachable: {}", randomNamesServerUrl, e.getMessage());
         }
     }
 
@@ -529,7 +594,10 @@ public class McpClientManager {
 
     public McpToolExecutionResult executeToolCall(String sessionId, String toolName, String argumentsJson, com.workshop.agent.model.AgentSession session) {
         String targetServer = toolToServerMap.getOrDefault(toolName, "local-mcp-server");
-        String transport = (targetServer.equals("open-meteo-weather") || targetServer.equals("energy-market-server") || targetServer.equals("energy-market-server-bmad")) ? "STREAMABLE_HTTP" : "LOOPBACK";
+        String transport = (targetServer.equals("open-meteo-weather")
+                || targetServer.equals("energy-market-server")
+                || targetServer.equals("energy-market-server-bmad")
+                || targetServer.equals("random-names-server")) ? "STREAMABLE_HTTP" : "LOOPBACK";
 
         if (session != null) {
             if (!session.isMcpToolEnabled(toolName)) {
@@ -571,6 +639,8 @@ public class McpClientManager {
                 rpcResponse = sendHttpJsonRpc(energyServerUrl, rpcRequest, energySessionId, sId -> this.energySessionId = sId);
             } else if ("energy-market-server-bmad".equals(targetServer)) {
                 rpcResponse = sendHttpJsonRpc(energyBmadServerUrl, rpcRequest, energyBmadSessionId, sId -> this.energyBmadSessionId = sId);
+            } else if ("random-names-server".equals(targetServer)) {
+                rpcResponse = sendHttpJsonRpc(randomNamesServerUrl, rpcRequest, randomNamesSessionId, sId -> this.randomNamesSessionId = sId);
             } else {
                 rpcResponse = localMcpServer.handleRequest(rpcRequest);
             }

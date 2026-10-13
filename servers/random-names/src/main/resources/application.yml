@@ -1,0 +1,23 @@
+server:
+  port: 9000
+
+spring:
+  application:
+    name: random-names-server
+  ai:
+    mcp:
+      server:
+        name: random-names-server
+        version: 1.0.0
+        protocol: streamable
+        streamable-http:
+          mcp-endpoint: /mcp
+        capabilities:
+          tool: true
+          resource: true
+          prompt: true
+
+logging:
+  level:
+    org.springframework.ai: INFO
+    com.workshop.randomnames: DEBUG

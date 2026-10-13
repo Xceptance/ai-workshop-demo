@@ -33,7 +33,7 @@ class McpClientManagerTest {
     @DisplayName("Local and OpenMeteo servers are discovered on startup")
     void testInitialDiscovery() {
         List<McpServerConfig> configs = clientManager.getServerConfigs();
-        assertThat(configs).hasSize(5);
+        assertThat(configs).hasSize(6);
 
         McpServerConfig localConfig = configs.stream()
                 .filter(c -> c.id().equals("local-mcp-server"))
@@ -47,9 +47,9 @@ class McpClientManagerTest {
         assertThat(weatherConfig.status()).isEqualTo("CONNECTED");
         assertThat(weatherConfig.toolCount()).isGreaterThan(0);
 
-        // Both standalone subprojects are represented in server configs
+        // Standalone subprojects are represented in server configs
         assertThat(configs.stream().map(McpServerConfig::id))
-                .contains("energy-market-server", "energy-market-server-bmad");
+                .contains("energy-market-server", "energy-market-server-bmad", "random-names-server");
     }
 
     @Test
