@@ -1,23 +1,64 @@
+# ==============================================================================
+# Model Context Protocol (MCP) Server Configuration
+# Workshop Demo: Random Names Server (Port 9000)
+# ==============================================================================
+#
+# ARCHITECTURE OVERVIEW:
+# This application demonstrates an external standalone MCP Server built on
+# Spring Boot 4.1, Spring AI 2.0.1, and Java 25.
+#
+# The server is explicitly hosted on port 9000 to keep it cleanly separated from:
+#   - Port 8080: Main workshop agent web application
+#   - Port 8081: Energy Market MCP Server
+#   - Port 8082: Energy Market BMAD MCP Server
+#
+# PROTOCOL & TRANSPORT:
+# The server utilizes the modern "Streamable HTTP" (Server-Sent Events / SSE)
+# transport specification defined by Anthropic's Model Context Protocol (2024-11-05).
+# Incoming JSON-RPC 2.0 requests are posted to `/mcp`, returning streaming event
+# streams or JSON responses back to the client.
+# ==============================================================================
+
 server:
+  # The HTTP listening port for both MCP wire protocol and REST inspection endpoints
   port: 9000
 
 spring:
   application:
     name: random-names-server
+
   ai:
     mcp:
       server:
+        # MCP Server identity announced during the JSON-RPC "initialize" handshake
         name: random-names-server
         version: 1.0.0
+
+        # Protocol transport mode: 'streamable' configures HTTP SSE transport.
+        # Alternative transport is 'stdio' (standard input/output for local CLI subprocesses).
+        # In this workshop demo, we use streamable HTTP so multiple agents and human
+        # debuggers can interact with the server simultaneously over the network.
         protocol: streamable
+
         streamable-http:
+          # The JSON-RPC 2.0 endpoint where AI agents send initialize, tools/list,
+          # tools/call, resources/list, resources/read, prompts/list, and prompts/get.
           mcp-endpoint: /mcp
+
+        # MCP Capability Declarations:
+        # These flags tell the connecting AI Agent which of the three MCP primitives
+        # this server supports. In this demo, all three core concepts are enabled:
         capabilities:
+          # 1. Tools: Dynamic function execution (e.g. get_random_name, pick_pair_programming_duo)
           tool: true
+          # 2. Resources: Passive contextual data URIs (e.g. names://participants/list)
           resource: true
+          # 3. Prompts: Pre-packaged prompt templates (e.g. pick_next_presenter)
           prompt: true
 
 logging:
   level:
+    # Log Spring AI MCP protocol exchanges (handshakes, session management)
     org.springframework.ai: INFO
+    # Debug logging for tool executions, participant modifications, and pair selections
     com.workshop.randomnames: DEBUG

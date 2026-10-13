@@ -20,14 +20,56 @@ import org.springframework.web.context.WebApplicationContext;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+/**
+ * ============================================================================
+ * WORKSHOP DEMO: Comprehensive Integration Test Suite for MCP Server
+ * ============================================================================
+ *
+ * <p><b>Educational Purpose:</b></p>
+ * This test suite provides end-to-end and component-level verification for all
+ * facets of our standalone Model Context Protocol (MCP) server. When developing
+ * custom MCP servers for production or workshop demonstrations, automated testing
+ * must address four distinct verification layers:
+ *
+ * <ol>
+ *   <li><b>Layer 1 - Domain Logic ({@link NameService}):</b>
+ *       Verifies thread-safe collection mutation, case-insensitive uniqueness,
+ *       prefix matching, and non-repeating pair selection independently of any
+ *       network or protocol overhead.</li>
+ *
+ *   <li><b>Layer 2 - Direct MCP Component Invocations (Tools, Resources, Prompts):</b>
+ *       Validates that Spring beans decorated with {@code @McpTool},
+ *       {@code @McpResource}, and {@code @McpPrompt} return properly structured,
+ *       audit-friendly responses with metadata tags when invoked directly by
+ *       Spring test fixtures.</li>
+ *
+ *   <li><b>Layer 3 - Parallel Human REST Verification API ({@code /api/names}):</b>
+ *       Confirms that workshop attendees and instructors can independently inspect,
+ *       query, add, and delete participants via standard HTTP endpoints using their
+ *       browser or curl.</li>
+ *
+ *   <li><b>Layer 4 - MCP Wire Protocol Testing (JSON-RPC 2.0 over Streamable HTTP):</b>
+ *       Simulates an actual AI Agent client (such as Claude Desktop or Antigravity)
+ *       initiating the MCP session handshake ({@code initialize}), negotiating
+ *       protocol versions, receiving session tracking headers ({@code Mcp-Session-Id}),
+ *       and requesting schema catalogs via {@code tools/list}, {@code resources/list},
+ *       and {@code prompts/list}.</li>
+ * </ol>
+ *
+ * <p><b>Coding Style:</b></p>
+ * Written in strict Allman indentation style (opening brace on a separate line)
+ * with thorough inline documentation for workshop participants.
+ */
 @SpringBootTest
-class RandomNamesServerIntegrationTest {
-
+class RandomNamesServerIntegrationTest
+{
     @Autowired
     private WebApplicationContext webApplicationContext;
 
@@ -48,19 +90,30 @@ class RandomNamesServerIntegrationTest {
     @Autowired
     private RandomNamesPrompts prompts;
 
+    /**
+     * Resets the participant pool to the initial 10 workshop attendees before every test
+     * to guarantee test isolation and idempotent assertions, and initializes {@link MockMvc}.
+     */
     @BeforeEach
-    void setUp() {
+    void setUp()
+    {
         nameService.resetNames();
         mockMvc = MockMvcBuilders.webAppContextSetup(webApplicationContext).build();
     }
 
+    // ========================================================================
+    // LAYER 1: DOMAIN LOGIC VERIFICATION
+    // ========================================================================
+
     @Nested
     @DisplayName("Domain NameService Tests")
-    class NameServiceTests {
-
+    class NameServiceTests
+    {
         @Test
-        @DisplayName("Name pool contains exact 10 workshop participants")
-        void testParticipantPool() {
+        @DisplayName("Name pool contains exact 10 initial workshop participants")
+        void testParticipantPool()
+        {
+            // Verify the initial immutable seed collection matches workshop attendees
             List<String> names = nameService.getNames();
             assertThat(names).containsExactly(
                     "Alex", "Rene", "Ray", "Jane", "Katja",
@@ -71,64 +124,85 @@ class RandomNamesServerIntegrationTest {
 
         @Test
         @DisplayName("addName adds participant and prevents duplicates case-insensitively")
-        void testAddName() {
+        void testAddName()
+        {
+            // Adding a unique participant should succeed and increment count
             assertThat(nameService.addName("Zoe")).isTrue();
             assertThat(nameService.getNamesCount()).isEqualTo(11);
             assertThat(nameService.getNames()).contains("Zoe");
 
-            // Duplicate should return false
+            // Adding duplicate with different casing must be rejected (case-insensitive deduplication)
             assertThat(nameService.addName("zoe")).isFalse();
+            assertThat(nameService.getNamesCount()).isEqualTo(11);
+
+            // Adding blank/whitespace name must throw IllegalArgumentException
+            assertThatThrownBy(() -> nameService.addName("   "))
+                    .isInstanceOf(IllegalArgumentException.class);
             assertThat(nameService.getNamesCount()).isEqualTo(11);
         }
 
         @Test
-        @DisplayName("removeName removes participant and handles not found")
-        void testRemoveName() {
+        @DisplayName("removeName removes participant and handles non-existent lookups")
+        void testRemoveName()
+        {
+            // Successfully removing an existing participant
             assertThat(nameService.removeName("Dude")).isTrue();
             assertThat(nameService.getNamesCount()).isEqualTo(9);
             assertThat(nameService.getNames()).doesNotContain("Dude");
 
-            // Already removed
+            // Attempting to remove an already removed name must return false
             assertThat(nameService.removeName("Dude")).isFalse();
-            // Non-existent
+
+            // Attempting to remove a completely non-existent name must return false
             assertThat(nameService.removeName("NonExistent")).isFalse();
         }
 
         @Test
-        @DisplayName("searchByStartingLetter matches case-insensitively")
-        void testSearchByStartingLetter() {
+        @DisplayName("searchByStartingLetter matches case-insensitively and filters correctly")
+        void testSearchByStartingLetter()
+        {
+            // Lowercase query matches 'Katja' and 'Katrin'
             List<String> kMatches = nameService.searchByStartingLetter("k");
             assertThat(kMatches).containsExactly("Katja", "Katrin");
 
+            // Uppercase query matches 'Bernd'
             List<String> bMatches = nameService.searchByStartingLetter("B");
             assertThat(bMatches).containsExactly("Bernd");
 
+            // Non-matching character returns empty list without error
             List<String> noMatches = nameService.searchByStartingLetter("Z");
             assertThat(noMatches).isEmpty();
 
+            // Empty or null string returns empty list safely
             List<String> emptySearch = nameService.searchByStartingLetter("");
             assertThat(emptySearch).isEmpty();
         }
 
         @Test
-        @DisplayName("getRandomName picks from the pool")
-        void testRandomSelection() {
+        @DisplayName("getRandomName picks from the active participant pool")
+        void testRandomSelection()
+        {
             String name = nameService.getRandomName();
             assertThat(nameService.getNames()).contains(name);
         }
 
         @Test
-        @DisplayName("getRandomName respects exclusion parameter")
-        void testExclusion() {
-            for (int i = 0; i < 20; i++) {
+        @DisplayName("getRandomName respects exclusion parameter to prevent self-selection")
+        void testExclusion()
+        {
+            // Execute multiple rounds to statistically ensure exclusion is strictly honored
+            for (int i = 0; i < 20; i++)
+            {
                 String name = nameService.getRandomName("Mario");
                 assertThat(name).isNotEqualTo("Mario");
+                assertThat(nameService.getNames()).contains(name);
             }
         }
 
         @Test
-        @DisplayName("selectPair returns two distinct names")
-        void testPairSelection() {
+        @DisplayName("selectPair returns two distinct names for driver/navigator roles")
+        void testPairSelection()
+        {
             List<String> pair = nameService.selectPair();
             assertThat(pair).hasSize(2);
             assertThat(pair.get(0)).isNotEqualTo(pair.get(1));
@@ -136,13 +210,18 @@ class RandomNamesServerIntegrationTest {
         }
     }
 
+    // ========================================================================
+    // LAYER 2: MCP CONCEPT 1 - TOOLS (DYNAMIC EXECUTION)
+    // ========================================================================
+
     @Nested
     @DisplayName("Concept 1: MCP Tools (Dynamic Execution)")
-    class ToolsTests {
-
+    class ToolsTests
+    {
         @Test
         @DisplayName("getRandomName tool returns formatted result with source port and name")
-        void testGetRandomNameTool() {
+        void testGetRandomNameTool()
+        {
             String output = tools.getRandomName(null);
             assertThat(output).contains("[MCP Server: random-names-server (Port 9000)]");
             assertThat(output).contains("Selected random name:");
@@ -150,46 +229,53 @@ class RandomNamesServerIntegrationTest {
 
         @Test
         @DisplayName("listWorkshopNames tool returns all 10 participants")
-        void testListWorkshopNamesTool() {
+        void testListWorkshopNamesTool()
+        {
             String output = tools.listWorkshopNames();
             assertThat(output).contains("All 10 workshop participants");
             assertThat(output).contains("Alex", "Rene", "Ray", "Dude", "Mario");
         }
 
         @Test
-        @DisplayName("pickPairProgrammingDuo tool returns Driver and Navigator")
-        void testPickPairTool() {
+        @DisplayName("pickPairProgrammingDuo tool returns Driver and Navigator roles")
+        void testPickPairTool()
+        {
             String output = tools.pickPairProgrammingDuo();
             assertThat(output).contains("Driver = '");
             assertThat(output).contains("Navigator = '");
         }
 
         @Test
-        @DisplayName("addWorkshopName tool adds participant and returns updated pool")
-        void testAddWorkshopNameTool() {
+        @DisplayName("addWorkshopName tool adds participant and reports updated pool size")
+        void testAddWorkshopNameTool()
+        {
             String output = tools.addWorkshopName("Linus");
             assertThat(output).contains("Successfully added 'Linus'");
             assertThat(output).contains("Participant pool now has 11 names");
             assertThat(nameService.getNames()).contains("Linus");
 
+            // Attempting to add duplicate participant reports clear feedback
             String duplicate = tools.addWorkshopName("Linus");
             assertThat(duplicate).contains("Participant 'Linus' already exists in the pool");
         }
 
         @Test
-        @DisplayName("removeWorkshopName tool removes participant")
-        void testRemoveWorkshopNameTool() {
+        @DisplayName("removeWorkshopName tool removes participant and handles not found")
+        void testRemoveWorkshopNameTool()
+        {
             String output = tools.removeWorkshopName("Mario");
             assertThat(output).contains("Successfully removed 'Mario'");
             assertThat(output).contains("Participant pool now has 9 names");
 
+            // Attempting to remove non-existent participant reports helpful error
             String notFound = tools.removeWorkshopName("Mario");
             assertThat(notFound).contains("Participant 'Mario' was not found in the pool");
         }
 
         @Test
-        @DisplayName("searchNamesByLetter tool returns matching participants")
-        void testSearchNamesByLetterTool() {
+        @DisplayName("searchNamesByLetter tool returns matching participants or clear empty notice")
+        void testSearchNamesByLetterTool()
+        {
             String kResult = tools.searchNamesByLetter("k");
             assertThat(kResult).contains("Found 2 participant(s) starting with 'k'");
             assertThat(kResult).contains("Katja, Katrin");
@@ -199,13 +285,18 @@ class RandomNamesServerIntegrationTest {
         }
     }
 
+    // ========================================================================
+    // LAYER 2: MCP CONCEPT 2 - RESOURCES (CONTEXTUAL DATA)
+    // ========================================================================
+
     @Nested
     @DisplayName("Concept 2: MCP Resources (Contextual Data)")
-    class ResourcesTests {
-
+    class ResourcesTests
+    {
         @Test
         @DisplayName("names://participants/list returns JSON list of all 10 participants")
-        void testParticipantsListResource() throws Exception {
+        void testParticipantsListResource() throws Exception
+        {
             String json = resources.getParticipantsList();
             JsonNode root = objectMapper.readTree(json);
             assertThat(root.path("count").asInt()).isEqualTo(10);
@@ -215,7 +306,8 @@ class RandomNamesServerIntegrationTest {
 
         @Test
         @DisplayName("names://participants/random returns live JSON snapshot")
-        void testRandomSnapshotResource() throws Exception {
+        void testRandomSnapshotResource() throws Exception
+        {
             String json = resources.getRandomParticipantSnapshot();
             JsonNode root = objectMapper.readTree(json);
             assertThat(root.has("selectedName")).isTrue();
@@ -225,7 +317,8 @@ class RandomNamesServerIntegrationTest {
 
         @Test
         @DisplayName("names://participants/stats returns statistical metadata")
-        void testStatsResource() throws Exception {
+        void testStatsResource() throws Exception
+        {
             String json = resources.getParticipantStats();
             JsonNode root = objectMapper.readTree(json);
             assertThat(root.path("poolSize").asInt()).isEqualTo(10);
@@ -234,13 +327,18 @@ class RandomNamesServerIntegrationTest {
         }
     }
 
+    // ========================================================================
+    // LAYER 2: MCP CONCEPT 3 - PROMPTS (PRE-PACKAGED TEMPLATES)
+    // ========================================================================
+
     @Nested
     @DisplayName("Concept 3: MCP Prompts (Pre-Packaged Templates)")
-    class PromptsTests {
-
+    class PromptsTests
+    {
         @Test
         @DisplayName("pickNextPresenter prompt includes topic and guidance")
-        void testPickPresenterPrompt() {
+        void testPickPresenterPrompt()
+        {
             String promptText = prompts.pickNextPresenter("Agent Memory");
             assertThat(promptText).contains("get_random_name");
             assertThat(promptText).contains("Agent Memory");
@@ -249,7 +347,8 @@ class RandomNamesServerIntegrationTest {
 
         @Test
         @DisplayName("setupPairProgramming prompt includes task and roles")
-        void testSetupPairPrompt() {
+        void testSetupPairPrompt()
+        {
             String promptText = prompts.setupPairProgramming("Building MCP Server");
             assertThat(promptText).contains("pick_pair_programming_duo");
             assertThat(promptText).contains("Driver");
@@ -258,7 +357,8 @@ class RandomNamesServerIntegrationTest {
 
         @Test
         @DisplayName("inspectMcpCapabilities prompt contrasts Tools, Resources, and Prompts")
-        void testInspectPrompt() {
+        void testInspectPrompt()
+        {
             String promptText = prompts.inspectMcpCapabilities();
             assertThat(promptText).contains("Tools:");
             assertThat(promptText).contains("Resources:");
@@ -266,13 +366,18 @@ class RandomNamesServerIntegrationTest {
         }
     }
 
+    // ========================================================================
+    // LAYER 3: PARALLEL REST VERIFICATION API
+    // ========================================================================
+
     @Nested
     @DisplayName("HTTP REST Endpoints")
-    class RestEndpointTests {
-
+    class RestEndpointTests
+    {
         @Test
         @DisplayName("GET / returns status UP, port 9000, and 10 names")
-        void testStatusEndpoint() throws Exception {
+        void testStatusEndpoint() throws Exception
+        {
             mockMvc.perform(get("/"))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.status").value("UP"))
@@ -283,7 +388,8 @@ class RandomNamesServerIntegrationTest {
 
         @Test
         @DisplayName("GET /api/names/random returns random participant")
-        void testRandomNameRest() throws Exception {
+        void testRandomNameRest() throws Exception
+        {
             mockMvc.perform(get("/api/names/random"))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.selectedName").isNotEmpty())
@@ -292,7 +398,8 @@ class RandomNamesServerIntegrationTest {
 
         @Test
         @DisplayName("POST /api/names adds a new participant")
-        void testAddNameRest() throws Exception {
+        void testAddNameRest() throws Exception
+        {
             mockMvc.perform(post("/api/names").param("name", "Ada"))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.success").value(true))
@@ -301,8 +408,9 @@ class RandomNamesServerIntegrationTest {
 
         @Test
         @DisplayName("DELETE /api/names/{name} removes participant")
-        void testRemoveNameRest() throws Exception {
-            mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete("/api/names/Alex"))
+        void testRemoveNameRest() throws Exception
+        {
+            mockMvc.perform(delete("/api/names/Alex"))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.success").value(true))
                     .andExpect(jsonPath("$.total").value(9));
@@ -310,7 +418,8 @@ class RandomNamesServerIntegrationTest {
 
         @Test
         @DisplayName("GET /api/names/search filters participants by letter")
-        void testSearchNamesRest() throws Exception {
+        void testSearchNamesRest() throws Exception
+        {
             mockMvc.perform(get("/api/names/search").param("letter", "K"))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.count").value(2))
@@ -319,13 +428,18 @@ class RandomNamesServerIntegrationTest {
         }
     }
 
+    // ========================================================================
+    // LAYER 4: MCP PROTOCOL STREAMABLE HTTP ENDPOINT TESTS (JSON-RPC 2.0)
+    // ========================================================================
+
     @Nested
     @DisplayName("MCP Protocol Streamable HTTP Endpoint Tests")
-    class McpProtocolTests {
-
+    class McpProtocolTests
+    {
         @Test
         @DisplayName("POST /mcp handles JSON-RPC initialize handshake")
-        void testMcpInitialize() throws Exception {
+        void testMcpInitialize() throws Exception
+        {
             String initPayload = """
                     {
                       "jsonrpc": "2.0",
@@ -354,8 +468,9 @@ class RandomNamesServerIntegrationTest {
         }
 
         @Test
-        @DisplayName("POST /mcp handles tools/list and returns random names tools")
-        void testMcpToolsList() throws Exception {
+        @DisplayName("POST /mcp handles tools/list and returns all 6 registered tools")
+        void testMcpToolsList() throws Exception
+        {
             String initPayload = """
                     {
                       "jsonrpc": "2.0",
@@ -395,7 +510,8 @@ class RandomNamesServerIntegrationTest {
                     .accept(MediaType.TEXT_EVENT_STREAM, MediaType.APPLICATION_JSON)
                     .content(listPayload);
 
-            if (sessionId != null) {
+            if (sessionId != null)
+            {
                 reqBuilder.header("Mcp-Session-Id", sessionId);
             }
 
@@ -405,6 +521,7 @@ class RandomNamesServerIntegrationTest {
                     .getResponse()
                     .getContentAsString();
 
+            // Verify all 6 tools are discovered dynamically by the AI agent
             assertThat(response).contains("get_random_name");
             assertThat(response).contains("list_workshop_names");
             assertThat(response).contains("pick_pair_programming_duo");
@@ -415,7 +532,8 @@ class RandomNamesServerIntegrationTest {
 
         @Test
         @DisplayName("POST /mcp handles prompts/list and returns pre-packaged prompts")
-        void testMcpPromptsList() throws Exception {
+        void testMcpPromptsList() throws Exception
+        {
             String initPayload = """
                     {
                       "jsonrpc": "2.0",
@@ -455,7 +573,8 @@ class RandomNamesServerIntegrationTest {
                     .accept(MediaType.TEXT_EVENT_STREAM, MediaType.APPLICATION_JSON)
                     .content(listPromptsPayload);
 
-            if (sessionId != null) {
+            if (sessionId != null)
+            {
                 reqBuilder.header("Mcp-Session-Id", sessionId);
             }
 
@@ -470,8 +589,9 @@ class RandomNamesServerIntegrationTest {
         }
 
         @Test
-        @DisplayName("POST /mcp handles resources/list and returns names resources")
-        void testMcpResourcesList() throws Exception {
+        @DisplayName("POST /mcp handles resources/list and returns registered context resources")
+        void testMcpResourcesList() throws Exception
+        {
             String initPayload = """
                     {
                       "jsonrpc": "2.0",
@@ -511,7 +631,8 @@ class RandomNamesServerIntegrationTest {
                     .accept(MediaType.TEXT_EVENT_STREAM, MediaType.APPLICATION_JSON)
                     .content(listResourcesPayload);
 
-            if (sessionId != null) {
+            if (sessionId != null)
+            {
                 reqBuilder.header("Mcp-Session-Id", sessionId);
             }
 

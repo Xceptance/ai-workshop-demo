@@ -1,9 +1,29 @@
 <?xml version="1.0" encoding="UTF-8"?>
+<!--
+  ============================================================================
+  WORKSHOP DEMO: Random Names Model Context Protocol (MCP) Server
+  ============================================================================
+  This Maven POM configures a dedicated, standalone MCP server application built
+  with:
+    - Java 25 (Latest LTS / Modern Java Features)
+    - Spring Boot 4.1.0
+    - Spring AI 2.0.1 (Official Spring Framework MCP Server Starters)
+
+  EDUCATIONAL PURPOSE:
+  Notice how lightweight this configuration is: by adding the single dependency
+  'spring-ai-starter-mcp-server-webmvc', Spring Boot automatically configures:
+    1. A JSON-RPC 2.0 Streamable HTTP endpoint on '/mcp'.
+    2. Automatic reflection-based tool schema generation from @McpTool / @Tool.
+    3. Resource discovery and resolution from @McpResource.
+    4. Prompt template management from @McpPrompt.
+  ============================================================================
+-->
 <project xmlns="http://maven.apache.org/POM/4.0.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
+    <!-- Spring Boot Parent Starter: Provides sensible defaults, dependency management, and build plugins -->
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
@@ -24,6 +44,7 @@
         <spring-ai.version>2.0.1</spring-ai.version>
     </properties>
 
+    <!-- Spring AI Bill of Materials (BOM) ensures compatible versions of all Spring AI starters -->
     <dependencyManagement>
         <dependencies>
             <dependency>
@@ -37,13 +58,13 @@
     </dependencyManagement>
 
     <dependencies>
-        <!-- Spring Boot Web Starter -->
+        <!-- Spring Boot Web Starter: Hosts standard HTTP server and REST controllers -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
         </dependency>
 
-        <!-- Jackson -->
+        <!-- Jackson Databind & Java 8/Time modules for JSON-RPC serialization -->
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-databind</artifactId>
@@ -53,13 +74,15 @@
             <artifactId>jackson-datatype-jsr310</artifactId>
         </dependency>
 
-        <!-- Spring AI MCP Server WebMvc Starter -->
+        <!-- Spring AI MCP Server WebMvc Starter:
+             Core MCP protocol engine handling SSE, JSON-RPC 2.0 dispatching,
+             session state tracking, and annotation-driven tool/resource/prompt discovery -->
         <dependency>
             <groupId>org.springframework.ai</groupId>
             <artifactId>spring-ai-starter-mcp-server-webmvc</artifactId>
         </dependency>
 
-        <!-- Testing -->
+        <!-- Testing: JUnit 5, AssertJ, and Spring Boot MockMvc integration test harnesses -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
@@ -69,6 +92,7 @@
 
     <build>
         <plugins>
+            <!-- Spring Boot Maven Plugin creates executable uber-jar and enables 'mvn spring-boot:run' -->
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
