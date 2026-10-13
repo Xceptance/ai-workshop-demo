@@ -70,6 +70,9 @@
                 <button type="button" class="preset-btn" onclick="usePresetPrompt('List the files in the workspace directory using the local MCP server.')">
                     📁 MCP File Explorer
                 </button>
+                <button type="button" class="preset-btn" onclick="usePresetPrompt('Pick a random participant for pair programming using the random-names MCP server and verify they are from the workshop pool.')">
+                    🎲 Random Participant (Port 9000)
+                </button>
             </th:block>
             <!-- Classic Mode Presets -->
             <th:block th:unless="${mode == 'mcp'}">

@@ -8,7 +8,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 class AgentSessionTest {
 
     @Test
-    @DisplayName("Tools and MCP servers are enabled by default upon session creation")
+    @DisplayName("Tools and MCP servers are enabled by default upon session creation, except random-names-server which is default off")
     void testDefaultEnablementState() {
         AgentSession session = new AgentSession("sess-1", "Test Session", "gemini-3.8-flash", "System Prompt", 0.2);
 
@@ -18,8 +18,10 @@ class AgentSessionTest {
         assertThat(session.isMcpServerEnabled("open-meteo-weather")).isTrue();
         assertThat(session.isMcpToolEnabled("get_weather")).isTrue();
 
+        // random-names-server is disabled by default for new sessions
+        assertThat(session.isMcpServerEnabled("random-names-server")).isFalse();
         assertThat(session.getDisabledTools()).isEmpty();
-        assertThat(session.getDisabledMcpServers()).isEmpty();
+        assertThat(session.getDisabledMcpServers()).containsExactly("random-names-server");
         assertThat(session.getDisabledMcpTools()).isEmpty();
     }
 
@@ -38,6 +40,11 @@ class AgentSessionTest {
 
         session.setMcpServerEnabled("open-meteo-weather", false);
         assertThat(session.isMcpServerEnabled("open-meteo-weather")).isFalse();
+        assertThat(session.getDisabledMcpServers()).containsExactlyInAnyOrder("open-meteo-weather", "random-names-server");
+
+        // Re-enable random-names-server
+        session.setMcpServerEnabled("random-names-server", true);
+        assertThat(session.isMcpServerEnabled("random-names-server")).isTrue();
         assertThat(session.getDisabledMcpServers()).containsExactly("open-meteo-weather");
 
         session.setMcpToolEnabled("get_weather", false);
@@ -61,7 +68,7 @@ class AgentSessionTest {
         assertThat(sessionB.isToolEnabled("calculate")).isTrue();
         assertThat(sessionB.isMcpServerEnabled("local-mcp-server")).isTrue();
         assertThat(sessionB.getDisabledTools()).isEmpty();
-        assertThat(sessionB.getDisabledMcpServers()).isEmpty();
+        assertThat(sessionB.getDisabledMcpServers()).containsExactly("random-names-server");
     }
 
     @Test

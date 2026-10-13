@@ -29,10 +29,18 @@ public class AgentSession {
     private final List<AgentStepEvent> stepEvents = new CopyOnWriteArrayList<>();
     private TokenUsageStats totalTokenStats = TokenUsageStats.empty();
 
+    public static final java.util.Set<String> DEFAULT_DISABLED_MCP_SERVERS = java.util.Set.of("random-names-server");
+
     // Enabled/Disabled state tracking (per-session isolation)
     private final java.util.Set<String> disabledTools = java.util.concurrent.ConcurrentHashMap.newKeySet();
-    private final java.util.Set<String> disabledMcpServers = java.util.concurrent.ConcurrentHashMap.newKeySet();
+    private final java.util.Set<String> disabledMcpServers = initDefaultDisabledMcpServers();
     private final java.util.Set<String> disabledMcpTools = java.util.concurrent.ConcurrentHashMap.newKeySet();
+
+    private static java.util.Set<String> initDefaultDisabledMcpServers() {
+        var set = java.util.concurrent.ConcurrentHashMap.<String>newKeySet();
+        set.addAll(DEFAULT_DISABLED_MCP_SERVERS);
+        return set;
+    }
 
     public AgentSession(String id, String title, String modelName, String systemPrompt, double temperature) {
         this.id = id;

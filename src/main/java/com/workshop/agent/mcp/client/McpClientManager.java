@@ -79,6 +79,8 @@ public class McpClientManager {
     private volatile String energyBmadSessionId = null;
     private volatile String randomNamesSessionId = null;
 
+    public static final Set<String> DEFAULT_DISABLED_SERVERS = Set.of("random-names-server");
+
     public McpClientManager(
             LocalMcpServer localMcpServer,
             OpenMeteoWeatherMcpServer openMeteoWeatherServer,
@@ -91,12 +93,12 @@ public class McpClientManager {
                 .connectTimeout(Duration.ofSeconds(3))
                 .build();
 
-        // Perform initial discovery on startup
-        refreshAllServers("system-init");
+        // Perform initial discovery on startup (random-names-server default off)
+        refreshAllServers("system-init", DEFAULT_DISABLED_SERVERS);
     }
 
     public synchronized void refreshAllServers(String sessionId) {
-        refreshAllServers(sessionId, Collections.emptySet());
+        refreshAllServers(sessionId, DEFAULT_DISABLED_SERVERS);
     }
 
     public synchronized void refreshAllServers(String sessionId, Set<String> disabledServers) {
@@ -105,7 +107,7 @@ public class McpClientManager {
         discoveredSpecifications.clear();
         toolRawDefinitions.clear();
 
-        Set<String> disabled = (disabledServers != null) ? disabledServers : Collections.emptySet();
+        Set<String> disabled = (disabledServers != null) ? disabledServers : DEFAULT_DISABLED_SERVERS;
 
         // 1. Discover from Local MCP Server
         if (!disabled.contains("local-mcp-server")) {
@@ -153,11 +155,11 @@ public class McpClientManager {
     }
 
     public List<McpServerConfig> getServerConfigs() {
-        return getServerConfigs(Collections.emptySet());
+        return getServerConfigs(DEFAULT_DISABLED_SERVERS);
     }
 
     public List<McpServerConfig> getServerConfigs(Set<String> disabledServers) {
-        Set<String> disabled = (disabledServers != null) ? disabledServers : Collections.emptySet();
+        Set<String> disabled = (disabledServers != null) ? disabledServers : DEFAULT_DISABLED_SERVERS;
         List<McpServerConfig> list = new ArrayList<>();
 
         // 1. Local Server
@@ -281,9 +283,9 @@ public class McpClientManager {
                 (int) randomNamesToolCount,
                 randomNamesTools,
                 randomNamesToolCount > 0 ? 10L : 0L,
-                !randomNamesEnabled ? "Server disabled by session setting" : (randomNamesToolCount > 0
+                !randomNamesEnabled ? "Server disabled by session setting (default off)" : (randomNamesToolCount > 0
                         ? "Active on port 9000 (no auth)"
-                        : "Standalone subproject in server/random-names (start with: mvn spring-boot:run)"),
+                        : "Standalone subproject in servers/random-names (start with: mvn spring-boot:run)"),
                 randomNamesEnabled
         ));
 

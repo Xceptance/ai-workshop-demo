@@ -50,6 +50,13 @@ class McpClientManagerTest {
         // Standalone subprojects are represented in server configs
         assertThat(configs.stream().map(McpServerConfig::id))
                 .contains("energy-market-server", "energy-market-server-bmad", "random-names-server");
+
+        // random-names-server is default off
+        McpServerConfig randomNamesConfig = configs.stream()
+                .filter(c -> c.id().equals("random-names-server"))
+                .findFirst().orElseThrow();
+        assertThat(randomNamesConfig.isEnabled()).isFalse();
+        assertThat(randomNamesConfig.status()).isEqualTo("DISABLED");
     }
 
     @Test
