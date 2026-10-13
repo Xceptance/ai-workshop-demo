@@ -50,6 +50,7 @@ class RandomNamesServerIntegrationTest {
 
     @BeforeEach
     void setUp() {
+        nameService.resetNames();
         mockMvc = MockMvcBuilders.webAppContextSetup(webApplicationContext).build();
     }
 
@@ -66,6 +67,47 @@ class RandomNamesServerIntegrationTest {
                     "Katrin", "Johannes", "Bernd", "Dude", "Mario"
             );
             assertThat(nameService.getNamesCount()).isEqualTo(10);
+        }
+
+        @Test
+        @DisplayName("addName adds participant and prevents duplicates case-insensitively")
+        void testAddName() {
+            assertThat(nameService.addName("Zoe")).isTrue();
+            assertThat(nameService.getNamesCount()).isEqualTo(11);
+            assertThat(nameService.getNames()).contains("Zoe");
+
+            // Duplicate should return false
+            assertThat(nameService.addName("zoe")).isFalse();
+            assertThat(nameService.getNamesCount()).isEqualTo(11);
+        }
+
+        @Test
+        @DisplayName("removeName removes participant and handles not found")
+        void testRemoveName() {
+            assertThat(nameService.removeName("Dude")).isTrue();
+            assertThat(nameService.getNamesCount()).isEqualTo(9);
+            assertThat(nameService.getNames()).doesNotContain("Dude");
+
+            // Already removed
+            assertThat(nameService.removeName("Dude")).isFalse();
+            // Non-existent
+            assertThat(nameService.removeName("NonExistent")).isFalse();
+        }
+
+        @Test
+        @DisplayName("searchByStartingLetter matches case-insensitively")
+        void testSearchByStartingLetter() {
+            List<String> kMatches = nameService.searchByStartingLetter("k");
+            assertThat(kMatches).containsExactly("Katja", "Katrin");
+
+            List<String> bMatches = nameService.searchByStartingLetter("B");
+            assertThat(bMatches).containsExactly("Bernd");
+
+            List<String> noMatches = nameService.searchByStartingLetter("Z");
+            assertThat(noMatches).isEmpty();
+
+            List<String> emptySearch = nameService.searchByStartingLetter("");
+            assertThat(emptySearch).isEmpty();
         }
 
         @Test
@@ -120,6 +162,40 @@ class RandomNamesServerIntegrationTest {
             String output = tools.pickPairProgrammingDuo();
             assertThat(output).contains("Driver = '");
             assertThat(output).contains("Navigator = '");
+        }
+
+        @Test
+        @DisplayName("addWorkshopName tool adds participant and returns updated pool")
+        void testAddWorkshopNameTool() {
+            String output = tools.addWorkshopName("Linus");
+            assertThat(output).contains("Successfully added 'Linus'");
+            assertThat(output).contains("Participant pool now has 11 names");
+            assertThat(nameService.getNames()).contains("Linus");
+
+            String duplicate = tools.addWorkshopName("Linus");
+            assertThat(duplicate).contains("Participant 'Linus' already exists in the pool");
+        }
+
+        @Test
+        @DisplayName("removeWorkshopName tool removes participant")
+        void testRemoveWorkshopNameTool() {
+            String output = tools.removeWorkshopName("Mario");
+            assertThat(output).contains("Successfully removed 'Mario'");
+            assertThat(output).contains("Participant pool now has 9 names");
+
+            String notFound = tools.removeWorkshopName("Mario");
+            assertThat(notFound).contains("Participant 'Mario' was not found in the pool");
+        }
+
+        @Test
+        @DisplayName("searchNamesByLetter tool returns matching participants")
+        void testSearchNamesByLetterTool() {
+            String kResult = tools.searchNamesByLetter("k");
+            assertThat(kResult).contains("Found 2 participant(s) starting with 'k'");
+            assertThat(kResult).contains("Katja, Katrin");
+
+            String zResult = tools.searchNamesByLetter("Z");
+            assertThat(zResult).contains("No participants found starting with 'Z'");
         }
     }
 
@@ -213,6 +289,34 @@ class RandomNamesServerIntegrationTest {
                     .andExpect(jsonPath("$.selectedName").isNotEmpty())
                     .andExpect(jsonPath("$.poolSize").value(10));
         }
+
+        @Test
+        @DisplayName("POST /api/names adds a new participant")
+        void testAddNameRest() throws Exception {
+            mockMvc.perform(post("/api/names").param("name", "Ada"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.success").value(true))
+                    .andExpect(jsonPath("$.total").value(11));
+        }
+
+        @Test
+        @DisplayName("DELETE /api/names/{name} removes participant")
+        void testRemoveNameRest() throws Exception {
+            mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete("/api/names/Alex"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.success").value(true))
+                    .andExpect(jsonPath("$.total").value(9));
+        }
+
+        @Test
+        @DisplayName("GET /api/names/search filters participants by letter")
+        void testSearchNamesRest() throws Exception {
+            mockMvc.perform(get("/api/names/search").param("letter", "K"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.count").value(2))
+                    .andExpect(jsonPath("$.matches[0]").value("Katja"))
+                    .andExpect(jsonPath("$.matches[1]").value("Katrin"));
+        }
     }
 
     @Nested
@@ -304,6 +408,9 @@ class RandomNamesServerIntegrationTest {
             assertThat(response).contains("get_random_name");
             assertThat(response).contains("list_workshop_names");
             assertThat(response).contains("pick_pair_programming_duo");
+            assertThat(response).contains("add_workshop_name");
+            assertThat(response).contains("remove_workshop_name");
+            assertThat(response).contains("search_names_by_letter");
         }
 
         @Test
