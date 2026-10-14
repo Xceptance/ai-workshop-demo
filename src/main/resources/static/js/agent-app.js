@@ -10,6 +10,7 @@ document.addEventListener('DOMContentLoaded', () => {
     renderAllMath();
     initPayloadInspector();
     initToolAndMcpToggles();
+    initPromptInput();
 });
 
 window.addEventListener('load', () => {
@@ -319,6 +320,7 @@ function usePresetPrompt(text) {
     const input = document.getElementById('promptInput');
     if (input) {
         input.value = text;
+        autoResizePromptInput(input);
         input.focus();
     }
 }
@@ -746,6 +748,7 @@ document.body.addEventListener('htmx:afterSwap', function (evt) {
     const input = document.getElementById('promptInput');
     if (input) {
         input.value = '';
+        autoResizePromptInput(input);
         input.focus();
     }
     renderAllMath();
@@ -1100,4 +1103,87 @@ window.selectNewSessionModelString = function(modelName) {
         input.focus();
     }
 };
+
+/**
+ * Auto-grow textarea for prompt input and handle multi-line shortcuts:
+ * - Enter: submit prompt
+ * - Shift + Enter: new line
+ * - Ctrl + Enter / Cmd + Enter: submit prompt
+ */
+function autoResizePromptInput(textarea) {
+    if (!textarea) return;
+    textarea.style.height = 'auto';
+    const computed = window.getComputedStyle(textarea);
+    const borderTop = parseFloat(computed.borderTopWidth) || 0;
+    const borderBottom = parseFloat(computed.borderBottomWidth) || 0;
+    const minH = 42;
+    const maxH = 180;
+    const contentH = textarea.scrollHeight + borderTop + borderBottom;
+    const newHeight = Math.min(Math.max(contentH, minH), maxH);
+    textarea.style.height = `${newHeight}px`;
+    if (contentH > maxH) {
+        textarea.style.overflowY = 'auto';
+    } else {
+        textarea.style.overflowY = 'hidden';
+    }
+}
+
+function submitPromptForm(textarea) {
+    if (!textarea) return;
+    const val = textarea.value.trim();
+    if (!val) return;
+    const form = textarea.closest('form');
+    if (!form) return;
+    if (typeof form.requestSubmit === 'function') {
+        form.requestSubmit();
+    } else if (typeof htmx !== 'undefined') {
+        htmx.trigger(form, 'submit');
+    } else {
+        form.submit();
+    }
+}
+
+function handlePromptKeydown(e) {
+    if (e.key === 'Enter') {
+        if (e.ctrlKey || e.metaKey) {
+            e.preventDefault();
+            submitPromptForm(e.target);
+            return;
+        }
+        if (e.shiftKey) {
+            // Allow natural newline insertion, then auto-resize
+            setTimeout(() => autoResizePromptInput(e.target), 0);
+            return;
+        }
+        if (!e.isComposing) {
+            e.preventDefault();
+            submitPromptForm(e.target);
+        }
+    }
+}
+
+function initPromptInput() {
+    const input = document.getElementById('promptInput');
+    if (input) {
+        autoResizePromptInput(input);
+    }
+}
+
+// Global delegated handlers to ensure shortcut & auto-resize persist across HTMX fragment re-renders
+document.addEventListener('keydown', (e) => {
+    if (e.target && e.target.id === 'promptInput') {
+        handlePromptKeydown(e);
+    }
+});
+
+document.addEventListener('input', (e) => {
+    if (e.target && e.target.id === 'promptInput') {
+        autoResizePromptInput(e.target);
+    }
+});
+
+window.autoResizePromptInput = autoResizePromptInput;
+window.handlePromptKeydown = handlePromptKeydown;
+window.submitPromptForm = submitPromptForm;
+
 

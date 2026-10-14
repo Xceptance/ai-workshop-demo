@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
-<div th:fragment="chatContent" id="chatPanelContainer" class="d-flex flex-column h-100 overflow-hidden">
+<div th:fragment="chatContent" id="chatPanelContainer" class="d-flex flex-column flex-grow-1 overflow-hidden" style="min-height: 0;">
     <!-- Messages Scroll Area -->
     <div id="chatScrollArea" class="chat-scroll-area flex-grow-1 p-3">
         <!-- Welcome banner if empty -->
@@ -109,24 +109,32 @@
               hx-target="#chatPanelContainer"
               hx-swap="outerHTML"
               hx-indicator="#agentLoadingIndicator"
-              class="d-flex gap-2">
+              class="d-flex align-items-end gap-2">
             <input type="hidden" id="currentSessionId" name="sessionId" th:value="${sessionId}">
-            <input type="text"
-                   id="promptInput"
-                   name="prompt"
-                   class="form-control bg-white text-dark border-secondary-subtle"
-                   placeholder="Ask the agent anything (e.g. math, file search, server info)..."
-                   required
-                   autocomplete="off">
-            <button type="submit" class="btn btn-primary px-4 fw-semibold">
-                <i class="fa-solid fa-paper-plane me-1"></i> Run
+            <div class="flex-grow-1 position-relative">
+                <textarea id="promptInput"
+                          name="prompt"
+                          rows="1"
+                          class="form-control bg-white text-dark border-secondary-subtle prompt-textarea"
+                          placeholder="Ask the agent anything (e.g. math, file search, server info)..."
+                          title="Press Enter to run, Shift+Enter for a new line"
+                          oninput="autoResizePromptInput(this)"
+                          onkeydown="handlePromptKeydown(event)"
+                          required
+                          autocomplete="off"></textarea>
+            </div>
+            <button type="submit"
+                    class="btn btn-primary px-3 fw-semibold text-nowrap flex-shrink-0 d-inline-flex align-items-center justify-content-center gap-2 prompt-action-btn"
+                    title="Run Prompt (Enter)">
+                <i class="fa-solid fa-paper-plane"></i>
+                <span>Run</span>
             </button>
             <button type="button"
                     hx-post="/session/clear"
                     hx-target="#chatPanelContainer"
                     hx-swap="outerHTML"
                     hx-vals="js:{sessionId: document.getElementById('currentSessionId').value}"
-                    class="btn btn-outline-secondary"
+                    class="btn btn-outline-secondary flex-shrink-0 d-inline-flex align-items-center justify-content-center prompt-action-btn prompt-delete-btn"
                     title="Clear Conversation History">
                 <i class="fa-solid fa-trash-can"></i>
             </button>

@@ -15,7 +15,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
     
     <!-- Custom Glass-Box Styles -->
-    <link rel="stylesheet" th:href="@{/css/glassbox-agent.css}">
+    <link rel="stylesheet" th:href="@{/css/glassbox-agent.css(v=2)}">
     
     <!-- HTMX -->
     <script src="https://unpkg.com/htmx.org@1.9.12"></script>
@@ -31,8 +31,8 @@
     <div th:replace="~{fragments/header :: headerBar}"></div>
 
     <!-- Main Container -->
-    <div class="container-fluid px-4 flex-grow-1 overflow-hidden pb-3">
-        <div class="row g-3 h-100 overflow-hidden">
+    <div class="container-fluid px-4 flex-grow-1 d-flex flex-column overflow-hidden pb-3" style="min-height: 0;">
+        <div class="row gx-3 gy-0 flex-grow-1 overflow-hidden" style="min-height: 0;">
             
             <!-- LEFT PANE: Interactive Agent Chat -->
             <div class="col-lg-6 d-flex flex-column h-100 overflow-hidden">
@@ -112,6 +112,6 @@
     <!-- Bootstrap 5 JS Bundle -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <!-- Custom Reactive Agent JS -->
-    <script th:src="@{/js/agent-app.js}"></script>
+    <script th:src="@{/js/agent-app.js(v=2)}"></script>
 </body>
 </html>
