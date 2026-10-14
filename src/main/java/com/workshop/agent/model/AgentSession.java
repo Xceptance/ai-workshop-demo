@@ -19,7 +19,7 @@ public class AgentSession {
     private String modelName;
     private String thinkingLevel = "medium"; // "off", "low", "medium", "high", "dynamic"
     private boolean showReasoning = true; // Toggle to expose model reasoning / internal thoughts in execution inspector
-    private final String systemPrompt;
+    private String systemPrompt;
     private final double temperature;
 
     @JsonFormat(shape = JsonFormat.Shape.STRING)
@@ -153,6 +153,12 @@ public class AgentSession {
 
     public String getSystemPrompt() {
         return systemPrompt;
+    }
+
+    public void setSystemPrompt(String systemPrompt) {
+        if (systemPrompt != null && !systemPrompt.isBlank()) {
+            this.systemPrompt = systemPrompt.trim();
+        }
     }
 
     public double getTemperature() {

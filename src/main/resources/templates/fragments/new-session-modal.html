@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<div th:fragment="newSessionModal" class="modal fade" id="newSessionModal" tabindex="-1" aria-labelledby="newSessionModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content shadow-lg border-0">
+            <div class="modal-header bg-white border-bottom border-light-subtle pb-3">
+                <div class="d-flex align-items-center gap-2">
+                    <div class="p-2 rounded-3 bg-primary bg-opacity-10 text-primary">
+                        <i class="fa-solid fa-circle-plus fs-5"></i>
+                    </div>
+                    <div>
+                        <h5 class="modal-title fw-bold text-dark mb-0" id="newSessionModalLabel">Start New Agent Session</h5>
+                        <small class="text-secondary">Redefine the system prompt, choose runtime mode, and select model configuration</small>
+                    </div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+
+            <!-- Hidden container storing the default system prompt for JavaScript resets -->
+            <div id="rawDefaultSystemPrompt" style="display:none;" th:text="${defaultSystemPrompt}"></div>
+
+            <form th:action="@{/session/new}" method="post" id="newSessionForm">
+                <div class="modal-body p-4">
+
+                    <!-- 1. System Prompt Section (Editable with Suggested Default) -->
+                    <div class="mb-4">
+                        <div class="d-flex align-items-center justify-content-between mb-2">
+                            <label for="newSessionSystemPromptInput" class="form-label fw-bold text-dark mb-0 d-flex align-items-center gap-2">
+                                <i class="fa-solid fa-scroll text-primary"></i>
+                                <span>System Prompt</span>
+                            </label>
+                            <span id="newSessionPromptBadge" class="badge font-mono small bg-success-subtle text-success border border-success-subtle">
+                                Suggested Default
+                            </span>
+                        </div>
+                        <p class="small text-secondary mb-2">
+                            The system prompt sits at the very root of every LLM conversation turn. It defines the agent's identity, behavioral guardrails, and tool execution strategy. It is fully editable, but the workshop default is pre-filled as the suggested baseline.
+                        </p>
+
+                        <!-- Presets & Quick Action Toolbar -->
+                        <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2 p-2 bg-light rounded-3 border border-light-subtle">
+                            <div class="d-flex flex-wrap align-items-center gap-1">
+                                <span class="small text-secondary fw-semibold me-1"><i class="fa-solid fa-masks-theater text-primary me-1"></i>Persona Presets:</span>
+                                <button type="button" class="preset-btn py-1 px-2" style="font-size: 0.78rem;" onclick="applyPromptPreset('default')">
+                                    🛠️ Workshop Default
+                                </button>
+                                <button type="button" class="preset-btn py-1 px-2" style="font-size: 0.78rem;" onclick="applyPromptPreset('pirate')">
+                                    🏴‍☠️ Pirate
+                                </button>
+                                <button type="button" class="preset-btn py-1 px-2" style="font-size: 0.78rem;" onclick="applyPromptPreset('json')">
+                                    ⚡ JSON Only
+                                </button>
+                                <button type="button" class="preset-btn py-1 px-2" style="font-size: 0.78rem;" onclick="applyPromptPreset('security')">
+                                    🕵️ Security Auditor
+                                </button>
+                                <button type="button" class="preset-btn py-1 px-2" style="font-size: 0.78rem;" onclick="applyPromptPreset('socratic')">
+                                    🧮 Socratic Tutor
+                                </button>
+                                <button type="button" class="preset-btn py-1 px-2" style="font-size: 0.78rem;" onclick="applyPromptPreset('minimal')">
+                                    🤖 Minimalist
+                                </button>
+                            </div>
+                            <div class="d-flex align-items-center gap-1 ms-auto">
+                                <button type="button" class="btn btn-sm btn-outline-secondary py-1 px-2 font-mono small" onclick="resetNewSessionPrompt()" title="Reset back to default workshop prompt">
+                                    <i class="fa-solid fa-rotate-left me-1"></i> Reset
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary py-1 px-2 font-mono small" onclick="clearNewSessionPrompt()" title="Clear textarea">
+                                    <i class="fa-solid fa-eraser me-1"></i> Clear
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Editable Textarea -->
+                        <div class="position-relative">
+                            <textarea class="form-control font-mono fs-6 bg-light-subtle shadow-sm"
+                                      id="newSessionSystemPromptInput"
+                                      name="systemPrompt"
+                                      rows="7"
+                                      th:text="${defaultSystemPrompt}"
+                                      oninput="updatePromptBadge('newSessionPromptBadge', this.value)"
+                                      placeholder="Enter system prompt instructions for the agent..."></textarea>
+                        </div>
+                    </div>
+
+                    <!-- 2. Execution Mode Selection -->
+                    <div class="mb-4">
+                        <label class="form-label fw-bold text-dark d-flex align-items-center justify-content-between mb-2">
+                            <span><i class="fa-solid fa-diagram-project text-primary me-2"></i>Execution Mode</span>
+                            <span class="badge bg-light text-secondary border font-mono small">Classic vs MCP</span>
+                        </label>
+                        <div class="row g-2">
+                            <div class="col-sm-6">
+                                <label class="border rounded-3 p-3 d-flex align-items-start gap-2 h-100 cursor-pointer bg-light-subtle">
+                                    <input type="radio" name="mode" value="classic" class="form-check-input mt-1"
+                                           th:checked="${mode == null or mode == 'classic'}">
+                                    <div>
+                                        <div class="fw-bold text-dark small"><i class="fa-solid fa-cube text-primary me-1"></i> Classic Demo</div>
+                                        <small class="text-secondary d-block mt-1">In-process Java reflection tool execution (direct method dispatch).</small>
+                                    </div>
+                                </label>
+                            </div>
+                            <div class="col-sm-6">
+                                <label class="border rounded-3 p-3 d-flex align-items-start gap-2 h-100 cursor-pointer bg-light-subtle">
+                                    <input type="radio" name="mode" value="mcp" class="form-check-input mt-1"
+                                           th:checked="${mode == 'mcp'}">
+                                    <div>
+                                        <div class="fw-bold text-purple small"><i class="fa-solid fa-network-wired text-purple me-1"></i> MCP Demo</div>
+                                        <small class="text-secondary d-block mt-1">Out-of-process Model Context Protocol servers over JSON-RPC 2.0 (stdio/HTTP).</small>
+                                    </div>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 3. Model & Thinking Configuration -->
+                    <div class="p-3 bg-light rounded-3 border border-light-subtle">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label for="newSessionModelInput" class="form-label fw-bold text-dark small mb-1">
+                                    <i class="fa-solid fa-brain text-primary me-1"></i> Model
+                                </label>
+                                <input type="text"
+                                       name="modelName"
+                                       id="newSessionModelInput"
+                                       class="form-control font-mono form-control-sm"
+                                       th:value="${modelName}"
+                                       placeholder="e.g. gemini-3.8-flash">
+                                <div class="d-flex flex-wrap gap-1 mt-2">
+                                    <button type="button"
+                                            th:each="m : ${availableModels}"
+                                            th:data-model="${m}"
+                                            class="badge bg-white text-dark border font-mono p-1 text-decoration-none cursor-pointer"
+                                            onclick="selectNewSessionModelString(this.getAttribute('data-model'))"
+                                            th:text="${m}">gemini-3.8-flash</button>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold text-dark small mb-1">
+                                    <i class="fa-solid fa-lightbulb text-warning me-1"></i> Thinking Level
+                                </label>
+                                <select name="thinkingLevel" class="form-select form-select-sm font-mono">
+                                    <option value="dynamic" th:selected="${thinkingLevel == 'dynamic'}">⚡ Dynamic (Auto Budget)</option>
+                                    <option value="off" th:selected="${thinkingLevel == 'off' or thinkingLevel == 'none'}">🛑 Off / Direct (0 tokens)</option>
+                                    <option value="low" th:selected="${thinkingLevel == 'low'}">🟢 Low (~1,024 tokens)</option>
+                                    <option value="medium" th:selected="${thinkingLevel == null or thinkingLevel == 'medium'}">🟡 Medium (~4,096 tokens)</option>
+                                    <option value="high" th:selected="${thinkingLevel == 'high'}">🟣 High (~16,384 tokens)</option>
+                                </select>
+                                <small class="text-secondary d-block mt-1">Controls internal model deliberation before taking action.</small>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+
+                <div class="modal-footer bg-white border-top border-light-subtle">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <a th:href="@{'/?mode=' + ${mode != null ? mode : 'classic'}}" class="btn btn-light border text-secondary me-auto">
+                        <i class="fa-solid fa-bolt text-warning me-1"></i> Quick Start (Default Prompt)
+                    </a>
+                    <button type="submit" class="btn btn-primary px-4 fw-semibold">
+                        <i class="fa-solid fa-play me-1"></i> Start Session
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+</html>

@@ -39,6 +39,8 @@ class AgentWebControllerTest {
                 .andExpect(model().attribute("modelName", "gemini-3.8-flash"))
                 .andExpect(model().attribute("thinkingLevel", "medium"))
                 .andExpect(model().attribute("showReasoning", true))
+                .andExpect(model().attributeExists("systemPrompt"))
+                .andExpect(model().attributeExists("defaultSystemPrompt"))
                 .andExpect(model().attributeExists("activeToolCount"))
                 .andExpect(model().attributeExists("totalToolCount"))
                 .andExpect(model().attributeExists("activeMcpServerCount"))
@@ -143,4 +145,34 @@ class AgentWebControllerTest {
                 .andExpect(jsonPath("$.enabled").value(false));
     }
 
+    @Test
+    void testCreateNewSessionWithCustomSystemPrompt() throws Exception {
+        mockMvc.perform(post("/session/new")
+                        .param("mode", "mcp")
+                        .param("modelName", "gemini-3.8-flash")
+                        .param("thinkingLevel", "high")
+                        .param("systemPrompt", "You are a custom workshop agent."))
+                .andExpect(status().is3xxRedirection());
+    }
+
+    @Test
+    void testUpdateSessionSettingsWithSystemPrompt() throws Exception {
+        mockMvc.perform(post("/session/prompt-session/settings")
+                        .param("systemPrompt", "You are a pirate agent."))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/?sessionId=prompt-session&mode=classic"));
+
+        mockMvc.perform(get("/?sessionId=prompt-session"))
+                .andExpect(status().isOk())
+                .andExpect(model().attribute("systemPrompt", "You are a pirate agent."));
+    }
+
+    @Test
+    void testUpdateSystemPromptApi() throws Exception {
+        mockMvc.perform(post("/api/session/api-prompt-sess/system-prompt")
+                        .param("systemPrompt", "You are a JSON assistant."))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("success"))
+                .andExpect(jsonPath("$.systemPrompt").value("You are a JSON assistant."));
+    }
 }

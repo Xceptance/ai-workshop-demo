@@ -1,5 +1,6 @@
 package com.workshop.agent.web;
 
+import com.workshop.agent.config.AgentProperties;
 import com.workshop.agent.config.ApiKeyResolver;
 import com.workshop.agent.config.GeminiProperties;
 import com.workshop.agent.engine.TransparentAgentEngine;
@@ -34,6 +35,7 @@ public class AgentWebController {
     private final com.workshop.agent.mcp.client.McpClientManager mcpClientManager;
     private final ToolRegistry toolRegistry;
     private final GeminiProperties geminiProperties;
+    private final AgentProperties agentProperties;
     private final ApiKeyResolver.ResolvedKey resolvedKey;
     private final SessionDiskLogger sessionDiskLogger;
     private final MarkdownRenderer markdownRenderer;
@@ -45,6 +47,7 @@ public class AgentWebController {
             com.workshop.agent.mcp.client.McpClientManager mcpClientManager,
             ToolRegistry toolRegistry,
             GeminiProperties geminiProperties,
+            AgentProperties agentProperties,
             ApiKeyResolver.ResolvedKey resolvedKey,
             SessionDiskLogger sessionDiskLogger,
             MarkdownRenderer markdownRenderer
@@ -55,6 +58,7 @@ public class AgentWebController {
         this.mcpClientManager = mcpClientManager;
         this.toolRegistry = toolRegistry;
         this.geminiProperties = geminiProperties;
+        this.agentProperties = agentProperties;
         this.resolvedKey = resolvedKey;
         this.sessionDiskLogger = sessionDiskLogger;
         this.markdownRenderer = markdownRenderer;
@@ -64,18 +68,41 @@ public class AgentWebController {
     public String index(
             @RequestParam(value = "sessionId", required = false) String sessionId,
             @RequestParam(value = "mode", required = false) String mode,
+            @RequestParam(value = "systemPrompt", required = false) String systemPrompt,
             Model model
     ) {
-        if (sessionId == null || sessionId.isBlank()) {
+        boolean isNew = (sessionId == null || sessionId.isBlank());
+        if (isNew) {
             sessionId = UUID.randomUUID().toString().substring(0, 8);
         }
 
-        AgentSession session = agentEngine.getOrCreateSession(sessionId);
+        AgentSession session = agentEngine.getOrCreateSession(sessionId, systemPrompt);
         if (mode != null && !mode.isBlank()) {
             session.setMode(mode.trim().toLowerCase());
         }
+        if (systemPrompt != null && !systemPrompt.isBlank() && session.getMessages().isEmpty()) {
+            session.setSystemPrompt(systemPrompt);
+        }
         populateModel(model, session);
         return "index";
+    }
+
+    @PostMapping("/session/new")
+    public String createNewSession(
+            @RequestParam(value = "mode", required = false, defaultValue = "classic") String mode,
+            @RequestParam(value = "modelName", required = false) String modelName,
+            @RequestParam(value = "thinkingLevel", required = false) String thinkingLevel,
+            @RequestParam(value = "systemPrompt", required = false) String systemPrompt
+    ) {
+        String newSessionId = UUID.randomUUID().toString().substring(0, 8);
+        AgentSession session = agentEngine.createSession(
+                newSessionId,
+                mode,
+                modelName,
+                systemPrompt,
+                thinkingLevel
+        );
+        return "redirect:/?sessionId=" + newSessionId + "&mode=" + session.getMode();
     }
 
     @PostMapping("/chat")
@@ -187,6 +214,7 @@ public class AgentWebController {
             @RequestParam(value = "customModelName", required = false) String customModelName,
             @RequestParam(value = "thinkingLevel", required = false) String thinkingLevel,
             @RequestParam(value = "showReasoning", required = false) Boolean showReasoning,
+            @RequestParam(value = "systemPrompt", required = false) String systemPrompt,
             Model model
     ) {
         AgentSession session = agentEngine.getOrCreateSession(sessionId);
@@ -212,8 +240,33 @@ public class AgentWebController {
             session.setShowReasoning(showReasoning);
         }
 
+        if (systemPrompt != null && !systemPrompt.isBlank()) {
+            session.setSystemPrompt(systemPrompt);
+        }
+
         populateModel(model, session);
         return "redirect:/?sessionId=" + sessionId + "&mode=" + session.getMode();
+    }
+
+    @PostMapping("/api/session/{sessionId}/system-prompt")
+    @ResponseBody
+    public ResponseEntity<?> updateSystemPrompt(
+            @PathVariable("sessionId") String sessionId,
+            @RequestParam(value = "systemPrompt", required = false) String systemPromptParam,
+            @RequestBody(required = false) Map<String, String> body
+    ) {
+        String prompt = (body != null && body.get("systemPrompt") != null)
+                ? body.get("systemPrompt")
+                : systemPromptParam;
+        AgentSession session = agentEngine.getOrCreateSession(sessionId);
+        if (prompt != null && !prompt.isBlank()) {
+            session.setSystemPrompt(prompt);
+        }
+        return ResponseEntity.ok(Map.of(
+                "status", "success",
+                "sessionId", sessionId,
+                "systemPrompt", session.getSystemPrompt()
+        ));
     }
 
     @PostMapping("/session/{sessionId}/toggle-reasoning")
@@ -370,6 +423,8 @@ public class AgentWebController {
         model.addAttribute("showReasoning", session.isShowReasoning());
         model.addAttribute("availableModels", dynamicChatModelService.getAvailableModels());
         model.addAttribute("apiKeyInfo", resolvedKey);
+        model.addAttribute("systemPrompt", session.getSystemPrompt());
+        model.addAttribute("defaultSystemPrompt", agentProperties.getSystemPrompt());
         model.addAttribute("recentSessions", sessionDiskLogger.listRecentSessionSummaries());
     }
 }

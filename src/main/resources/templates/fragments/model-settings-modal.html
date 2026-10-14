@@ -145,7 +145,45 @@
                         </div>
                     </div>
 
-                    <!-- 4. Prompt Caching Status Card -->
+                    <!-- 4. System Prompt (Active Session) -->
+                    <div class="mb-4 p-3 bg-light rounded-3 border border-light-subtle">
+                        <div class="d-flex align-items-center justify-content-between mb-2">
+                            <label for="activeSessionSystemPromptInput" class="form-label fw-bold text-dark mb-0 d-flex align-items-center gap-2">
+                                <i class="fa-solid fa-scroll text-primary"></i>
+                                <span>Active Session System Prompt</span>
+                            </label>
+                            <span id="activeSessionPromptBadge" class="badge font-mono small"
+                                  th:classappend="${systemPrompt != defaultSystemPrompt} ? 'bg-warning-subtle text-warning-emphasis border border-warning-subtle' : 'bg-success-subtle text-success border border-success-subtle'"
+                                  th:text="${systemPrompt != defaultSystemPrompt} ? 'Customized' : 'Suggested Default'">Suggested Default</span>
+                        </div>
+                        <p class="small text-secondary mb-2">
+                            Defines the agent's instructions, persona, and constraints for this session. The current workshop prompt is the suggested default.
+                        </p>
+                        <!-- Quick action buttons -->
+                        <div class="d-flex flex-wrap gap-2 mb-2">
+                            <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill font-mono px-2 py-1 small"
+                                    onclick="resetActiveSessionPrompt()">
+                                <i class="fa-solid fa-rotate-left me-1"></i> Reset to Default
+                            </button>
+                            <button type="button" class="preset-btn py-1 px-2" style="font-size: 0.78rem;" onclick="applyPresetToActive('pirate')">
+                                🏴‍☠️ Pirate
+                            </button>
+                            <button type="button" class="preset-btn py-1 px-2" style="font-size: 0.78rem;" onclick="applyPresetToActive('json')">
+                                ⚡ JSON Only
+                            </button>
+                            <button type="button" class="preset-btn py-1 px-2" style="font-size: 0.78rem;" onclick="applyPresetToActive('security')">
+                                🕵️ Security
+                            </button>
+                        </div>
+                        <textarea class="form-control font-mono small"
+                                  id="activeSessionSystemPromptInput"
+                                  name="systemPrompt"
+                                  rows="6"
+                                  th:text="${systemPrompt}"
+                                  oninput="updatePromptBadge('activeSessionPromptBadge', this.value)"></textarea>
+                    </div>
+
+                    <!-- 5. Prompt Caching Status Card -->
                     <div class="p-3 bg-light rounded-3 border border-secondary-subtle">
                         <div class="d-flex align-items-center justify-content-between mb-2">
                             <span class="fw-bold text-dark small">
@@ -163,11 +201,16 @@
 
                 </div>
                 
-                <div class="modal-footer bg-white border-top border-light-subtle">
-                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary px-4 fw-semibold">
-                        <i class="fa-solid fa-check me-1"></i> Apply Settings
+                <div class="modal-footer bg-white border-top border-light-subtle d-flex justify-content-between">
+                    <button type="button" class="btn btn-outline-primary btn-sm" data-bs-dismiss="modal" data-bs-toggle="modal" data-bs-target="#newSessionModal">
+                        <i class="fa-solid fa-plus me-1"></i> Start New Session with Custom Prompt...
                     </button>
+                    <div class="d-flex gap-2">
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary px-4 fw-semibold">
+                            <i class="fa-solid fa-check me-1"></i> Apply Settings
+                        </button>
+                    </div>
                 </div>
             </form>
         </div>

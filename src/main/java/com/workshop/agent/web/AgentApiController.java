@@ -24,6 +24,21 @@ public class AgentApiController {
     }
 
     public record ChatRequest(String sessionId, String prompt) {}
+    public record CreateSessionRequest(String sessionId, String mode, String modelName, String systemPrompt, String thinkingLevel) {}
+
+    @PostMapping("/sessions")
+    public ResponseEntity<AgentSession> createSession(@RequestBody(required = false) CreateSessionRequest request) {
+        String id = (request != null && request.sessionId() != null && !request.sessionId().isBlank())
+                ? request.sessionId()
+                : UUID.randomUUID().toString().substring(0, 8);
+        String mode = request != null ? request.mode() : "classic";
+        String model = request != null ? request.modelName() : null;
+        String prompt = request != null ? request.systemPrompt() : null;
+        String thinking = request != null ? request.thinkingLevel() : null;
+
+        AgentSession session = agentEngine.createSession(id, mode, model, prompt, thinking);
+        return ResponseEntity.ok(session);
+    }
 
     @PostMapping("/chat")
     public ResponseEntity<ChatMessageDto> chat(@RequestBody ChatRequest request) {

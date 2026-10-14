@@ -1004,3 +1004,100 @@ function initToolAndMcpToggles() {
     });
 }
 
+/**
+ * System Prompt Customization & Presets
+ */
+const PROMPT_PRESETS = {
+    default: null, // dynamically retrieved from rawDefaultSystemPrompt
+    pirate: "You are a swashbuckling pirate AI agent designed for educational workshops.\nSpeak in colorful pirate dialect (using 'Ahoy!', 'matey', 'shiver me timbers'), but remain technically accurate and invoke tools to answer questions, calculate numbers, or inspect files.",
+    json: "You are a strict API agent designed for educational workshops.\nYou must ONLY respond with valid JSON containing the following structure:\n{\n  \"status\": \"ok\",\n  \"thought\": \"brief reasoning\",\n  \"toolsUsed\": [...],\n  \"result\": \"final answer\"\n}\nNever include markdown commentary or markdown fences outside the JSON object.",
+    security: "You are an ultra-cautious cybersecurity auditor agent designed for educational workshops.\nBefore calling any tool or returning facts, thoroughly analyze potential risks, untrusted input boundaries, and privilege levels. Explicitly state your threat model, risk level, and verification steps in your response.",
+    socratic: "You are a patient Socratic tutor AI agent designed for educational workshops.\nInstead of giving direct final answers immediately, guide the learner step-by-step with thoughtful questions and hints, using tools in the background to verify facts and math calculations.",
+    minimal: "You are a minimalist terminal agent designed for educational workshops.\nNever engage in conversational pleasantries or preamble. Call tools directly when needed, output only the essential facts or data, and be as concise as possible."
+};
+
+function getDefaultSystemPrompt() {
+    const rawEl = document.getElementById('rawDefaultSystemPrompt');
+    if (rawEl && rawEl.textContent) {
+        return rawEl.textContent.trim();
+    }
+    return "You are an intelligent, transparent AI Mini-Agent designed for educational workshops.";
+}
+
+window.resetNewSessionPrompt = function() {
+    const textarea = document.getElementById('newSessionSystemPromptInput');
+    if (textarea) {
+        textarea.value = getDefaultSystemPrompt();
+        updatePromptBadge('newSessionPromptBadge', textarea.value);
+        textarea.focus();
+    }
+};
+
+window.clearNewSessionPrompt = function() {
+    const textarea = document.getElementById('newSessionSystemPromptInput');
+    if (textarea) {
+        textarea.value = '';
+        updatePromptBadge('newSessionPromptBadge', '');
+        textarea.focus();
+    }
+};
+
+window.applyPromptPreset = function(presetKey) {
+    const textarea = document.getElementById('newSessionSystemPromptInput');
+    if (!textarea) return;
+    if (presetKey === 'default') {
+        textarea.value = getDefaultSystemPrompt();
+    } else if (PROMPT_PRESETS[presetKey]) {
+        textarea.value = PROMPT_PRESETS[presetKey];
+    }
+    updatePromptBadge('newSessionPromptBadge', textarea.value);
+    textarea.focus();
+};
+
+window.resetActiveSessionPrompt = function() {
+    const textarea = document.getElementById('activeSessionSystemPromptInput');
+    if (textarea) {
+        textarea.value = getDefaultSystemPrompt();
+        updatePromptBadge('activeSessionPromptBadge', textarea.value);
+        textarea.focus();
+    }
+};
+
+window.applyPresetToActive = function(presetKey) {
+    const textarea = document.getElementById('activeSessionSystemPromptInput');
+    if (!textarea) return;
+    if (presetKey === 'default') {
+        textarea.value = getDefaultSystemPrompt();
+    } else if (PROMPT_PRESETS[presetKey]) {
+        textarea.value = PROMPT_PRESETS[presetKey];
+    }
+    updatePromptBadge('activeSessionPromptBadge', textarea.value);
+    textarea.focus();
+};
+
+window.updatePromptBadge = function(badgeId, currentValue) {
+    const badge = document.getElementById(badgeId);
+    if (!badge) return;
+    const defaultVal = getDefaultSystemPrompt().trim();
+    const curVal = (currentValue || '').trim();
+
+    if (curVal === defaultVal) {
+        badge.className = 'badge font-mono small bg-success-subtle text-success border border-success-subtle';
+        badge.textContent = 'Suggested Default';
+    } else if (curVal === '') {
+        badge.className = 'badge font-mono small bg-danger-subtle text-danger border border-danger-subtle';
+        badge.textContent = 'Empty';
+    } else {
+        badge.className = 'badge font-mono small bg-warning-subtle text-warning-emphasis border border-warning-subtle';
+        badge.textContent = 'Customized';
+    }
+};
+
+window.selectNewSessionModelString = function(modelName) {
+    const input = document.getElementById('newSessionModelInput');
+    if (input) {
+        input.value = modelName;
+        input.focus();
+    }
+};
+

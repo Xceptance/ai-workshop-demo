@@ -85,4 +85,18 @@ class AgentSessionTest {
         assertThat(session.isToolEnabled("inspect_file")).isFalse();
         assertThat(session.isMcpServerEnabled("energy-market-server")).isFalse();
     }
+
+    @Test
+    @DisplayName("System prompt is initialized and can be redefined")
+    void testSystemPromptCustomization() {
+        AgentSession session = new AgentSession("sess-1", "Test Session", "gemini-3.8-flash", "Default System Prompt", 0.2);
+        assertThat(session.getSystemPrompt()).isEqualTo("Default System Prompt");
+
+        session.setSystemPrompt("You are a specialized pirate agent.");
+        assertThat(session.getSystemPrompt()).isEqualTo("You are a specialized pirate agent.");
+
+        // Blank input is ignored to preserve valid prompt
+        session.setSystemPrompt("   ");
+        assertThat(session.getSystemPrompt()).isEqualTo("You are a specialized pirate agent.");
+    }
 }

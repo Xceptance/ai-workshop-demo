@@ -87,20 +87,56 @@ public class TransparentAgentEngine {
     }
 
     public AgentSession getOrCreateSession(String sessionId) {
+        return getOrCreateSession(sessionId, null);
+    }
+
+    public AgentSession getOrCreateSession(String sessionId, String customSystemPrompt) {
         String defaultModel = (dynamicChatModelService != null && !dynamicChatModelService.getAvailableModels().isEmpty())
                 ? dynamicChatModelService.getAvailableModels().get(0)
                 : "gemini-3.8-flash";
         return sessions.computeIfAbsent(sessionId, id -> {
+            String prompt = (customSystemPrompt != null && !customSystemPrompt.isBlank())
+                    ? customSystemPrompt.trim()
+                    : agentProperties.getSystemPrompt();
             AgentSession session = new AgentSession(
                     id,
                     "Workshop Session " + id.substring(0, Math.min(6, id.length())),
                     defaultModel,
-                    agentProperties.getSystemPrompt(),
+                    prompt,
                     0.2
             );
             session.setThinkingLevel("medium");
             return session;
         });
+    }
+
+    public AgentSession createSession(String sessionId, String mode, String modelName, String systemPrompt, String thinkingLevel) {
+        String defaultModel = (modelName != null && !modelName.isBlank())
+                ? modelName.trim()
+                : ((dynamicChatModelService != null && !dynamicChatModelService.getAvailableModels().isEmpty())
+                    ? dynamicChatModelService.getAvailableModels().get(0)
+                    : "gemini-3.8-flash");
+        String prompt = (systemPrompt != null && !systemPrompt.isBlank())
+                ? systemPrompt.trim()
+                : agentProperties.getSystemPrompt();
+        String effectiveMode = (mode != null && !mode.isBlank()) ? mode.trim().toLowerCase() : "classic";
+        String effectiveThinking = (thinkingLevel != null && !thinkingLevel.isBlank()) ? thinkingLevel.trim().toLowerCase() : "medium";
+
+        AgentSession session = new AgentSession(
+                sessionId,
+                "Workshop Session " + sessionId.substring(0, Math.min(6, sessionId.length())),
+                effectiveMode,
+                defaultModel,
+                prompt,
+                0.2
+        );
+        session.setThinkingLevel(effectiveThinking);
+        sessions.put(sessionId, session);
+        return session;
+    }
+
+    public String getDefaultSystemPrompt() {
+        return agentProperties.getSystemPrompt();
     }
 
     public Collection<AgentSession> getAllSessions() {

@@ -9,10 +9,21 @@
                 <i class="fa-solid fa-robot fs-2 text-primary"></i>
             </div>
             <h5 class="text-dark fw-bold">Welcome to the Glass-Box AI Agent</h5>
-            <p class="small text-secondary col-md-8 mx-auto">
+            <p class="small text-secondary col-md-8 mx-auto mb-2">
                 This agent solves tasks by reasoning, selecting Java tools, executing them locally, and synthesizing observations.
                 Every step is captured live in the right-hand inspection drawer and saved to disk.
             </p>
+            <div class="d-inline-flex align-items-center gap-2 mt-2 p-2 px-3 rounded-pill bg-white border border-secondary-subtle shadow-sm">
+                <i class="fa-solid fa-scroll text-primary"></i>
+                <span class="small text-secondary font-mono">System Prompt:</span>
+                <span class="badge border font-mono small"
+                      th:classappend="${systemPrompt != defaultSystemPrompt} ? 'bg-warning-subtle text-warning-emphasis border-warning-subtle' : 'bg-success-subtle text-success border-success-subtle'"
+                      th:text="${systemPrompt != defaultSystemPrompt} ? 'Customized' : 'Suggested Default'">Suggested Default</span>
+                <button type="button" class="btn btn-link btn-sm p-0 ms-1 text-primary text-decoration-none fw-semibold small"
+                        data-bs-toggle="modal" data-bs-target="#newSessionModal">
+                    Redefine for New Session &raquo;
+                </button>
+            </div>
         </div>
 
         <!-- Render Messages -->

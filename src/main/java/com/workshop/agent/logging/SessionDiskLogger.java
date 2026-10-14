@@ -96,6 +96,7 @@ public class SessionDiskLogger {
             summary.put("messageCount", session.getMessages().size());
             summary.put("stepEventCount", session.getStepEvents().size());
             summary.put("tokenStats", session.getTotalTokenStats());
+            summary.put("systemPrompt", session.getSystemPrompt());
 
             File summaryFile = sessionDir.resolve("summary.json").toFile();
             objectMapper.writeValue(summaryFile, summary);
